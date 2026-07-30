@@ -1,11 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="GradleMigrationSettings" migrationVersion="1" />
   <component name="GradleSettings">
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="gradleJvm" value="26" />
-        <option name="myGradleHome" value="" />
+        <option name="gradleJvm" value="temurin-25" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/adapter-kis" />
+            <option value="$PROJECT_DIR$/adapter-postgres" />
+            <option value="$PROJECT_DIR$/adapter-strategy" />
+            <option value="$PROJECT_DIR$/app-backtest" />
+            <option value="$PROJECT_DIR$/app-live" />
+            <option value="$PROJECT_DIR$/trading" />
+          </set>
+        </option>
       </GradleProjectSettings>
     </option>
   </component>
