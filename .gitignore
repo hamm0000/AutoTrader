@@ -111,3 +111,52 @@ Icon
 .Trashes
 .VolumeIcon.icns
 .com.apple.timemachine.donotpresent
+
+# ==========================================
+# Claude & OpenAI Codex Dedicated .gitignore
+# ==========================================
+
+## --- 1. API Keys & Auth (인증 정보 및 API 키) ---
+#.env
+#.env.local
+#.env.*
+#!.env.example
+#*_key.txt
+#openai_key.txt
+#anthropic_key.txt
+#.anthropic/
+#.openai/
+
+# --- 2. Agent Prompts & Guidelines (프롬프트 및 에이전트 지침 파일) ---
+claude.md
+CLAUDE.md
+CLAUDE.md.local
+agents.md
+AGENTS.md
+codex.md
+CODEX.md
+CODEX.md.local
+claude_notes/
+
+# --- 3. Generated Docs & Workspaces (문서 및 임시 워크스페이스) ---
+docs/
+workspace/
+codex_workspace/
+claude_workspace/
+outputs/
+generated/
+
+# --- 4. Anthropic Claude (CLI / Desktop Settings) ---
+.claude/
+.claude.json
+claude_desktop_config.json
+
+# --- 5. OpenAI Codex (CLI / Cache / History) ---
+.codex/
+.codex-cache/
+codex_sessions/
+codex_history.json
+
+# --- 6. System & Logs ---
+*.tmp
+*.log
