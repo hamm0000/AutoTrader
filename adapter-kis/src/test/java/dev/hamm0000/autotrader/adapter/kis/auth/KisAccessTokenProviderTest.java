@@ -1,6 +1,7 @@
 package dev.hamm0000.autotrader.adapter.kis.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import dev.hamm0000.autotrader.adapter.kis.auth.mock.FakeInstantSource;
 import dev.hamm0000.autotrader.adapter.kis.auth.mock.FakeIssuer;
@@ -58,6 +59,25 @@ public class KisAccessTokenProviderTest {
     }
 
     @Test
+    void 만료가_30분_미만_남은_토큰이면_새로_발급받는다() {
+        // given
+        Instant now = Instant.now();
+        AccessToken expiring = new AccessToken("expiring-value", now.plus(Duration.ofMinutes(29)));
+        AccessToken renewed = new AccessToken("renewed-value", now.plus(Duration.ofHours(24)));
+        FakeIssuer issuer = new FakeIssuer(expiring, renewed);
+        FakeInstantSource timeSource = new FakeInstantSource(now);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer, timeSource);
+        provider.getAccessToken();
+
+        // when
+        AccessToken token = provider.getAccessToken();
+
+        // then
+        assertThat(token).isSameAs(renewed);
+        assertThat(issuer.issueCount()).isEqualTo(2);
+    }
+
+    @Test
     void 만료된_토큰이면_새로_발급받는다() {
         // given
         Instant now = Instant.now();
@@ -75,5 +95,24 @@ public class KisAccessTokenProviderTest {
         // then
         assertThat(token).isSameAs(renewed);
         assertThat(issuer.issueCount()).isEqualTo(2);
+    }
+
+    @Test
+    void 발급이_실패하면_예외를_그대로_전파한다() {
+        // given
+        RuntimeException failure = new RuntimeException("발급 실패");
+        AccessTokenIssuer issuer = () -> {
+            throw failure;
+        };
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer, InstantSource.system());
+
+        // when & then
+        assertThatThrownBy(provider::getAccessToken)
+                .isSameAs(failure);
+    }
+
+    @Test
+    void 갱신에_실패하면_기존_캐시를_유지한다() {
+
     }
 }
