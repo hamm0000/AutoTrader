@@ -2,9 +2,11 @@ package dev.hamm0000.autotrader.adapter.kis.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.Instant;
-
+import dev.hamm0000.autotrader.adapter.kis.auth.mock.FakeInstantSource;
 import dev.hamm0000.autotrader.adapter.kis.auth.mock.FakeIssuer;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.InstantSource;
 import org.junit.jupiter.api.Test;
 
 /*
@@ -24,9 +26,10 @@ public class KisAccessTokenProviderTest {
     @Test
     void 토큰이_없으면_새로_발급받는다() {
         // given
+        // 캐시 없어서 시간 안 중요함
         AccessToken issuedToken = new AccessToken("issued-value", Instant.now());
         FakeIssuer issuer = new FakeIssuer(issuedToken);
-        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer, InstantSource.system());
 
         // when
         AccessToken token = provider.getAccessToken();
@@ -39,9 +42,11 @@ public class KisAccessTokenProviderTest {
     @Test
     void 유효한_토큰이_있으면_발급을_요청하지_않고_재사용_한다() {
         // given
-        AccessToken issuedToken = new AccessToken("issued-value", Instant.now());
+        Instant now = Instant.now();
+        AccessToken issuedToken = new AccessToken("issued-value", now.plus(Duration.ofHours(24)));
         FakeIssuer issuer = new FakeIssuer(issuedToken);
-        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer);
+        FakeInstantSource timeSource = new FakeInstantSource(now);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer, timeSource);
 
         // when
         AccessToken first = provider.getAccessToken();
@@ -54,8 +59,21 @@ public class KisAccessTokenProviderTest {
 
     @Test
     void 만료된_토큰이면_새로_발급받는다() {
+        // given
+        Instant now = Instant.now();
+        AccessToken expiring = new AccessToken("expiring-value", now.plus(Duration.ofHours(1)));
+        AccessToken renewed = new AccessToken("renewed-value", now.plus(Duration.ofHours(25)));
+        FakeIssuer issuer = new FakeIssuer(expiring, renewed);
+        FakeInstantSource timeSource = new FakeInstantSource(now);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer, timeSource);
+        provider.getAccessToken();
 
+        // when
+        timeSource.moveTo(now.plus(Duration.ofHours(2)));
+        AccessToken token = provider.getAccessToken();
+
+        // then
+        assertThat(token).isSameAs(renewed);
+        assertThat(issuer.issueCount()).isEqualTo(2);
     }
-
-
 }
