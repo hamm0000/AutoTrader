@@ -1,4 +1,4 @@
-package dev.hamm0000.autotrader.adapter.kis.auth.mock;
+package dev.hamm0000.autotrader.adapter.kis.auth.testdouble;
 
 import dev.hamm0000.autotrader.adapter.kis.auth.AccessToken;
 import dev.hamm0000.autotrader.adapter.kis.auth.AccessTokenIssuer;
