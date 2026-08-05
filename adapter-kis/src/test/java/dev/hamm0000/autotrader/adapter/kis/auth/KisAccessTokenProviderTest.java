@@ -3,26 +3,23 @@ package dev.hamm0000.autotrader.adapter.kis.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
+import dev.hamm0000.autotrader.adapter.kis.auth.testdouble.BlockingFakeIssuer;
 import dev.hamm0000.autotrader.adapter.kis.auth.testdouble.FakeInstantSource;
 import dev.hamm0000.autotrader.adapter.kis.auth.testdouble.FakeIssuer;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
+import java.util.List;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-/*
-1. Token 최초 발급 (Token 미존재 시)
-    Token이 없을 때, Token을 요청하면, KIS에서 새 Token을 발급받는다.
-
-2. Token 재사용 및 갱신 (Token 존재 시)
-    유효한 Token이 있을 때, Token을 요청하면, KIS를 다시 호출하지 않고 기존 Token을 반환.
-    Token이 만료됐거나 만료 임박했을 때, Token을 요청하면, KIS에서 새 Token을 발급받는다.
-        이때 새 토큰 발급에 성공한 경우에만 기존 캐시를 교체함.
-3. Token 발급 실패
-    KIS가 에러를 반환하면, 예외를 던진다.
-*/
 
 public class KisAccessTokenProviderTest {
 
@@ -110,6 +107,53 @@ public class KisAccessTokenProviderTest {
         // when & then
         assertThatThrownBy(provider::getAccessToken)
                 .isSameAs(failure);
+    }
+
+    /**
+     *
+     * 이 동시성 테스트 한계점: 동시성 문제가 없다고는 보장할 수 없다.
+     * 첫 발급을 캐시 저장 전 상태에서 멈춰 경합 가능성을 높이긴 했지만,
+     * 다른 모든 스레드가 실제로 Provider 내부의 동일한 캐시 미스 구간까지 진입했는지는 보장하지 못한다.
+     *
+     * 따라서 해당 테스트는 동시 요청 환경에서 최종적으로 발급이 한 번만 발생하는지를 검증한다.
+     */
+
+    @Test
+    void 캐시_미스_상태에서_동시_요청이_발생해도_토큰은_한_번만_발급한다() throws Exception {
+        // given
+        int threadCount = 8;
+        AccessToken issuedToken = new AccessToken("issued-value", NOW.plus(Duration.ofHours(24)));
+        BlockingFakeIssuer issuer = new BlockingFakeIssuer(issuedToken);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer, InstantSource.fixed(NOW));
+
+        CyclicBarrier startTogether = new CyclicBarrier(threadCount);
+        ExecutorService pool = Executors.newFixedThreadPool(threadCount);
+
+        try {
+            // when
+            List<Future<AccessToken>> futures = IntStream.range(0, threadCount)
+                    .mapToObj(ignored -> pool.submit(() -> {
+                        startTogether.await(); //ready
+                        return provider.getAccessToken();
+                    }))
+                    .toList();
+
+            // 첫 발급 시작을 확인
+            // 발급 완료는 아래 completeIssue 호출 전까지 보류
+            assertThat(issuer.awaitIssueStarted(2, TimeUnit.SECONDS)).isTrue();
+
+
+            issuer.completeIssue();
+
+            // then
+            for (Future<AccessToken> future : futures) {
+                assertThat(future.get(2, TimeUnit.SECONDS)).isSameAs(issuedToken);
+            }
+            assertThat(issuer.issueCount()).isEqualTo(1);
+        } finally {
+            issuer.completeIssue(); // 조기 실패해도 대기 중인 스레드를 풀어줌
+            pool.shutdownNow();
+        }
     }
 
     @Test

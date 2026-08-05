@@ -9,6 +9,7 @@ public final class KisAccessTokenProvider {
 
     private final AccessTokenIssuer issuer;
     private final InstantSource timeSource;
+    private final Object lock = new Object();
 
     private AccessToken cached;
 
@@ -18,10 +19,12 @@ public final class KisAccessTokenProvider {
     }
 
     public AccessToken getAccessToken() {
-        if (cached != null && cached.isUsableAt(timeSource.instant(), REFRESH_MARGIN)) {
+        synchronized (lock) {
+            if (cached != null && cached.isUsableAt(timeSource.instant(), REFRESH_MARGIN)) {
+                return cached;
+            }
+            cached = issuer.issue();
             return cached;
         }
-        cached = issuer.issue();
-        return cached;
     }
 }
