@@ -23,8 +23,15 @@ public final class KisAccessTokenProvider {
             if (cached != null && cached.isUsableAt(timeSource.instant(), REFRESH_MARGIN)) {
                 return cached;
             }
-            cached = issuer.issue();
-            return cached;
+            try {
+                cached = issuer.issue();
+                return cached;
+            } catch (KisAuthException failure) {
+                if (cached != null && cached.isValidAt(timeSource.instant())) {
+                    return cached;
+                }
+                throw failure;
+            }
         }
     }
 }

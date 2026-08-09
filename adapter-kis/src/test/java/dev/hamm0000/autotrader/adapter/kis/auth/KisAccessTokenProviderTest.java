@@ -17,7 +17,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 
@@ -157,10 +156,19 @@ public class KisAccessTokenProviderTest {
     }
 
     @Test
-    @Disabled("retry 정책 확정 전까지 보류")
-    void 갱신에_실패하면_기존_캐시를_유지한다() {
-        // 만료 30분 미만 토큰이 있을 때, 갱신에 실패한다면 기존의 캐시를 유지하는 것을 테스트 하려했으나
-        // AccessToken의 isUsableAt 때문에 계속 재발급 시도하게 됨.
-        // 따라서 나중에 retry정책을 정하고 다시 생각해 보겠음
+    void 만료_임박_토큰의_갱신에_실패해도_실제_만료_전이면_기존_토큰을_반환한다() {
+        // given
+        AccessToken expiring = new AccessToken("expiring-value", NOW.plus(Duration.ofMinutes(29)));
+        FakeIssuer issuer = new FakeIssuer(expiring);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer, InstantSource.fixed(NOW));
+        provider.getAccessToken();
+        issuer.failWith(new KisAuthException("발급 실패"));
+
+        // when
+        AccessToken fallback = provider.getAccessToken();
+
+        // then
+        assertThat(fallback).isSameAs(expiring);
+        assertThat(issuer.issueCount()).isEqualTo(2);
     }
 }

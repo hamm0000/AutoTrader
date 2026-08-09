@@ -47,4 +47,28 @@ class AccessTokenTest {
         // then
         assertThat(usable).isFalse();
     }
+
+    @Test
+    void 만료_전이면_유효하다() {
+        // given
+        AccessToken token = new AccessToken("issued-value", EXPIRES_AT);
+
+        // when
+        boolean valid = token.isValidAt(EXPIRES_AT.minusSeconds(1));
+
+        // then
+        assertThat(valid).isTrue();
+    }
+
+    @Test
+    void 만료_시각부터는_유효하지_않다() {
+        // given
+        AccessToken token = new AccessToken("issued-value", EXPIRES_AT);
+
+        // when
+        boolean valid = token.isValidAt(EXPIRES_AT);
+
+        // then
+        assertThat(valid).isFalse();
+    }
 }
