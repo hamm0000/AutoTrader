@@ -171,4 +171,76 @@ public class KisAccessTokenProviderTest {
         assertThat(fallback).isSameAs(expiring);
         assertThat(issuer.issueCount()).isEqualTo(2);
     }
+
+    @Test
+    void 갱신_실패_후_backoff_중에는_발급을_요청하지_않고_기존_토큰을_반환한다() {
+        // given
+        AccessToken expiring = new AccessToken("expiring-value", NOW.plus(Duration.ofMinutes(29)));
+        FakeIssuer issuer = new FakeIssuer(expiring);
+        FakeInstantSource timeSource = new FakeInstantSource(NOW);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer, timeSource);
+        provider.getAccessToken();
+        issuer.failWith(new KisAuthException("발급 실패"));
+        provider.getAccessToken();
+
+        // when
+        timeSource.moveTo(NOW.plusSeconds(59));
+        AccessToken fallback = provider.getAccessToken();
+
+        // then
+        assertThat(fallback).isSameAs(expiring);
+        assertThat(issuer.issueCount()).isEqualTo(2);
+    }
+
+    @Test
+    void backoff가_끝나면_다시_갱신을_요청한다() {
+        // given
+        AccessToken expiring = new AccessToken("expiring-value", NOW.plus(Duration.ofMinutes(29)));
+        AccessToken renewed = new AccessToken("renewed-value", NOW.plus(Duration.ofHours(24)));
+        FakeIssuer issuer = new FakeIssuer(expiring, renewed);
+        FakeInstantSource timeSource = new FakeInstantSource(NOW);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer, timeSource);
+        provider.getAccessToken();
+        issuer.failWith(new KisAuthException("발급 실패"));
+        provider.getAccessToken();
+
+        // when
+        timeSource.moveTo(NOW.plus(Duration.ofMinutes(1)));
+        issuer.recover();
+        AccessToken token = provider.getAccessToken();
+
+        // then
+        assertThat(token).isSameAs(renewed);
+        assertThat(issuer.issueCount()).isEqualTo(3);
+    }
+
+    @Test
+    void 자동_재시도를_모두_소진하면_시간이_지나도_추가_발급을_요청하지_않는다() {
+        // given
+        AccessToken expiring = new AccessToken("expiring-value", NOW.plus(Duration.ofMinutes(29)));
+        FakeIssuer issuer = new FakeIssuer(expiring);
+        FakeInstantSource timeSource = new FakeInstantSource(NOW);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer, timeSource);
+        KisAuthException failure = new KisAuthException("발급 실패");
+        provider.getAccessToken();
+        issuer.failWith(failure);
+
+        provider.getAccessToken();
+        timeSource.moveTo(NOW.plus(Duration.ofMinutes(1)));
+        provider.getAccessToken();
+        timeSource.moveTo(NOW.plus(Duration.ofMinutes(3)));
+        provider.getAccessToken();
+        timeSource.moveTo(NOW.plus(Duration.ofMinutes(7)));
+        provider.getAccessToken();
+        timeSource.moveTo(NOW.plus(Duration.ofMinutes(15)));
+        provider.getAccessToken();
+        timeSource.moveTo(NOW.plus(Duration.ofMinutes(25)));
+        provider.getAccessToken();
+
+        // when & then
+        timeSource.moveTo(NOW.plus(Duration.ofHours(2)));
+        assertThatThrownBy(provider::getAccessToken)
+                .isInstanceOf(KisAuthException.class);
+        assertThat(issuer.issueCount()).isEqualTo(7);
+    }
 }

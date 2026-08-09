@@ -28,6 +28,10 @@ public class FakeIssuer implements AccessTokenIssuer {
         this.failure = failure;
     }
 
+    public void recover() {
+        this.failure = null;
+    }
+
     public int issueCount() {
         return issueCount;
     }

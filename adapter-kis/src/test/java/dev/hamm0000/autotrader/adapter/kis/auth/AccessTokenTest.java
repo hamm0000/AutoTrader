@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 class AccessTokenTest {
 
     private static final Duration REFRESH_MARGIN = Duration.ofMinutes(30);
-    private static final Instant EXPIRES_AT = Instant.now();
+    private static final Instant EXPIRES_AT = Instant.parse("2026-08-01T00:00:00Z");
 
     @Test
     void 만료가_30분_이상_남았다면_사용할_수_있다() {
