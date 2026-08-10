@@ -88,7 +88,7 @@ public class KisAccessTokenProviderTest {
     @Test
     void 발급이_실패하면_예외를_그대로_전파한다() {
         // given
-        RuntimeException failure = new RuntimeException("발급 실패");
+        KisAuthException failure = new KisAuthException("발급 실패");
         AccessTokenIssuer issuer = () -> {
             throw failure;
         };
@@ -97,6 +97,33 @@ public class KisAccessTokenProviderTest {
         // when & then
         assertThatThrownBy(provider::getAccessToken)
                 .isSameAs(failure);
+        assertThat(failure.reason()).isEqualTo(KisAuthException.Reason.ISSUE_FAILED);
+        assertThat(failure.retryAt()).isEmpty();
+    }
+
+    @Test
+    void backoff_중이고_사용할_토큰이_없으면_다음_재시도_시각을_알린다() {
+        // given
+        KisAuthException failure = new KisAuthException("발급 실패");
+        FakeIssuer issuer = new FakeIssuer();
+        FakeInstantSource timeSource = new FakeInstantSource(NOW);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer, timeSource);
+        issuer.failWith(failure);
+        assertThatThrownBy(provider::getAccessToken)
+                .isSameAs(failure);
+
+        // when
+        timeSource.moveTo(NOW.plusSeconds(59));
+
+        // then
+        assertThatThrownBy(provider::getAccessToken)
+                .isInstanceOfSatisfying(KisAuthException.class, exception -> {
+                    assertThat(exception).hasMessageContaining("재시도 대기");
+                    assertThat(exception.reason()).isEqualTo(KisAuthException.Reason.RETRY_DEFERRED);
+                    assertThat(exception.retryAt()).contains(NOW.plus(Duration.ofMinutes(1)));
+                    assertThat(exception).hasCause(failure);
+                });
+        assertThat(issuer.issueCount()).isEqualTo(1);
     }
 
     @Test

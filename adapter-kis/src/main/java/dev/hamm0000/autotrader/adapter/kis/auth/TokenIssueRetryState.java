@@ -50,10 +50,11 @@ final class TokenIssueRetryState {
         state = Ready.INSTANCE;
     }
 
-    KisAuthException lastFailure() {
+    KisAuthException issueOnHoldFailure() {
         return switch (state) {
-            case Waiting waiting -> waiting.lastFailure();
-            case Halted halted -> halted.lastFailure();
+            case Waiting waiting -> KisAuthException.retryDeferred(
+                    waiting.retryAt(), waiting.lastFailure());
+            case Halted halted -> KisAuthException.retryHalted(halted.lastFailure());
             case Ready _ -> throw new IllegalStateException("기록된 토큰 발급 실패가 없습니다");
         };
     }

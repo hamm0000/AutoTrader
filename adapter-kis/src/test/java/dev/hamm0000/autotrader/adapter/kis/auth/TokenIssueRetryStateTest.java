@@ -15,10 +15,18 @@ class TokenIssueRetryStateTest {
     @Test
     void 발급에_실패하면_재시도_시각_전까지_발급을_보류한다() {
         // given
-        retryState.recordFailure(new KisAuthException("발급 실패"), NOW);
+        KisAuthException failure = new KisAuthException("발급 실패");
+        retryState.recordFailure(failure, NOW);
 
         // when & then
         assertThat(retryState.isIssueOnHoldAt(NOW.plusSeconds(59))).isTrue();
+        assertThat(retryState.issueOnHoldFailure())
+                .satisfies(exception -> {
+                    assertThat(exception).hasMessageContaining("재시도 대기");
+                    assertThat(exception.reason()).isEqualTo(KisAuthException.Reason.RETRY_DEFERRED);
+                    assertThat(exception.retryAt()).contains(NOW.plus(Duration.ofMinutes(1)));
+                    assertThat(exception).hasCause(failure);
+                });
         assertThat(retryState.isIssueOnHoldAt(NOW.plus(Duration.ofMinutes(1)))).isFalse();
     }
 
@@ -35,7 +43,13 @@ class TokenIssueRetryStateTest {
 
         // when & then
         assertThat(retryState.isIssueOnHoldAt(NOW.plus(Duration.ofDays(1)))).isTrue();
-        assertThat(retryState.lastFailure()).isSameAs(lastFailure);
+        assertThat(retryState.issueOnHoldFailure())
+                .satisfies(exception -> {
+                    assertThat(exception).hasMessageContaining("자동 재시도가 중단");
+                    assertThat(exception.reason()).isEqualTo(KisAuthException.Reason.RETRY_HALTED);
+                    assertThat(exception.retryAt()).isEmpty();
+                    assertThat(exception).hasCause(lastFailure);
+                });
     }
 
     @Test

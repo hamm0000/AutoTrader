@@ -42,7 +42,7 @@ public final class KisAccessTokenProvider {
             }
             // Backoff 중에는 KIS를 호출하지 않음
             if (retryState.isIssueOnHoldAt(now)) {
-                return fallbackOrThrow(now);
+                return fallbackOrThrow(now, retryState.issueOnHoldFailure());
             }
             try {
                 cached = issuer.issue();
@@ -51,15 +51,16 @@ public final class KisAccessTokenProvider {
             } catch (KisAuthException failure) {
                 Instant failedAt = timeSource.instant();
                 retryState.recordFailure(failure, failedAt);
-                return fallbackOrThrow(failedAt);
+                return fallbackOrThrow(failedAt, failure);
             }
         }
     }
-    // 아직 만료되지 않은 캐시 토큰이 있으면 반환하고, 없으면 마지막 발급 실패를 전파
-    private AccessToken fallbackOrThrow(Instant now) {
+
+    // 아직 만료되지 않은 캐시 토큰이 있으면 반환하고, 없으면 현재 실패 상태를 전파
+    private AccessToken fallbackOrThrow(Instant now, KisAuthException failure) {
         if (cached != null && cached.isValidAt(now)) {
             return cached;
         }
-        throw retryState.lastFailure();
+        throw failure;
     }
 }
