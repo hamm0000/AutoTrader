@@ -13,4 +13,9 @@ public record AccessToken(String value, Instant expiresAt) {
     public boolean isValidAt(Instant now) {
         return now.isBefore(expiresAt);
     }
+
+    @Override
+    public String toString() {
+        return "AccessToken[value=***, expiresAt=" + expiresAt + "]";
+    }
 }

@@ -1,5 +1,6 @@
 package dev.hamm0000.autotrader.adapter.kis.auth;
 
+import java.net.http.HttpTimeoutException;
 import java.time.InstantSource;
 import java.util.Map;
 import org.springframework.http.MediaType;
@@ -37,6 +38,9 @@ public final class KisAccessTokenApi implements AccessTokenIssuer {
                     .retrieve()
                     .body(KisTokenResponse.class);
         } catch (RestClientException e) {
+            if (isCausedByTimeout(e)) {
+                throw KisAuthException.issueTimeout(e);
+            }
             throw new KisAuthException("KIS 접근 토큰 발급 요청이 실패했습니다", e);
         }
 
@@ -44,5 +48,16 @@ public final class KisAccessTokenApi implements AccessTokenIssuer {
             throw new KisAuthException("KIS 토큰 응답이 비어 있습니다");
         }
         return response.toAccessToken(timeSource);
+    }
+
+    private static boolean isCausedByTimeout(Throwable failure) {
+        Throwable cause = failure;
+        while (cause != null) {
+            if (cause instanceof HttpTimeoutException) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 }

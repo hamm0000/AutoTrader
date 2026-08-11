@@ -9,6 +9,8 @@ public class KisAuthException extends RuntimeException {
     public enum Reason {
         /** KIS 토큰 발급 요청 실패 */
         ISSUE_FAILED,
+        /** KIS 토큰 발급 요청 timeout */
+        ISSUE_TIMEOUT,
         /** Backoff 대기 중이라 새 토큰 발급을 시도하지 않음*/
         RETRY_DEFERRED, // backoff 때문에 요청 거절
         /** 자동 retry 횟수를 소진해 새 토큰 발급을 중단 */
@@ -32,12 +34,21 @@ public class KisAuthException extends RuntimeException {
         this.retryAt = retryAt;
     }
 
+    static KisAuthException issueTimeout(Throwable cause) {
+        Objects.requireNonNull(cause);
+        return new KisAuthException(
+                Reason.ISSUE_TIMEOUT,
+                "KIS AccessToken 발급 요청 시간이 초과되었습니다",
+                cause,
+                null);
+    }
+
     static KisAuthException retryDeferred(Instant retryAt, KisAuthException lastFailure) {
         Objects.requireNonNull(retryAt);
         Objects.requireNonNull(lastFailure);
         return new KisAuthException(
                 Reason.RETRY_DEFERRED,
-                "KIS 접근 토큰 발급 재시도 대기 중입니다: " + retryAt,
+                "KIS AccessToken 발급 재시도 대기 중입니다: " + retryAt,
                 lastFailure,
                 retryAt);
     }
@@ -46,7 +57,7 @@ public class KisAuthException extends RuntimeException {
         Objects.requireNonNull(lastFailure);
         return new KisAuthException(
                 Reason.RETRY_HALTED,
-                "KIS 접근 토큰 자동 재시도가 중단되었습니다",
+                "KIS AccessToken 자동 재시도가 중단되었습니다",
                 lastFailure,
                 null);
     }

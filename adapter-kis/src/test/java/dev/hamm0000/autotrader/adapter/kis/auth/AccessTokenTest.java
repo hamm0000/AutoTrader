@@ -71,4 +71,18 @@ class AccessTokenTest {
         // then
         assertThat(valid).isFalse();
     }
+
+    @Test
+    void 문자열로_표현해도_토큰값은_노출하지_않는다() {
+        // given
+        AccessToken token = new AccessToken("sensitive-token-value", EXPIRES_AT);
+
+        // when
+        String text = token.toString();
+
+        // then
+        assertThat(text)
+                .doesNotContain("sensitive-token-value")
+                .contains(EXPIRES_AT.toString());
+    }
 }
