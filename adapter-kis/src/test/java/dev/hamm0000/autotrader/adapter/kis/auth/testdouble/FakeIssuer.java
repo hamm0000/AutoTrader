@@ -7,7 +7,9 @@ import java.util.List;
 public class FakeIssuer implements AccessTokenIssuer {
 
     private final List<AccessToken> tokens;
+    private int tokenIndex;
     private int issueCount;
+    private RuntimeException failure;
 
     public FakeIssuer(AccessToken... tokens) {
         this.tokens = List.of(tokens);
@@ -15,9 +17,19 @@ public class FakeIssuer implements AccessTokenIssuer {
 
     @Override
     public AccessToken issue() {
-        AccessToken token = tokens.get(issueCount);
         issueCount++;
-        return token;
+        if (failure != null) {
+            throw failure;
+        }
+        return tokens.get(tokenIndex++);
+    }
+
+    public void failWith(RuntimeException failure) {
+        this.failure = failure;
+    }
+
+    public void recover() {
+        this.failure = null;
     }
 
     public int issueCount() {

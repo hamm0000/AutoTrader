@@ -8,21 +8,8 @@ import dev.hamm0000.autotrader.adapter.kis.auth.testdouble.FakeIssuer;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
-
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-/*
-1. Token 최초 발급 (Token 미존재 시)
-    Token이 없을 때, Token을 요청하면, KIS에서 새 Token을 발급받는다.
-
-2. Token 재사용 및 갱신 (Token 존재 시)
-    유효한 Token이 있을 때, Token을 요청하면, KIS를 다시 호출하지 않고 기존 Token을 반환.
-    Token이 만료됐거나 만료 임박했을 때, Token을 요청하면, KIS에서 새 Token을 발급받는다.
-        이때 새 토큰 발급에 성공한 경우에만 기존 캐시를 교체함.
-3. Token 발급 실패
-    KIS가 에러를 반환하면, 예외를 던진다.
-*/
 
 public class KisAccessTokenProviderTest {
 
@@ -101,7 +88,7 @@ public class KisAccessTokenProviderTest {
     @Test
     void 발급이_실패하면_예외를_그대로_전파한다() {
         // given
-        RuntimeException failure = new RuntimeException("발급 실패");
+        KisAuthException failure = new KisAuthException("발급 실패");
         AccessTokenIssuer issuer = () -> {
             throw failure;
         };
@@ -110,13 +97,92 @@ public class KisAccessTokenProviderTest {
         // when & then
         assertThatThrownBy(provider::getAccessToken)
                 .isSameAs(failure);
+        assertThat(failure.reason()).isEqualTo(KisAuthException.Reason.ISSUE_FAILED);
+        assertThat(failure.retryAt()).isEmpty();
     }
 
     @Test
-    @Disabled("retry 정책 확정 전까지 보류")
-    void 갱신에_실패하면_기존_캐시를_유지한다() {
-        // 만료 30분 미만 토큰이 있을 때, 갱신에 실패한다면 기존의 캐시를 유지하는 것을 테스트 하려했으나
-        // AccessToken의 isUsableAt 때문에 계속 재발급 시도하게 됨.
-        // 따라서 나중에 retry정책을 정하고 다시 생각해 보겠음
+    void backoff_중이고_사용할_토큰이_없으면_다음_재시도_시각을_알린다() {
+        // given
+        KisAuthException failure = new KisAuthException("발급 실패");
+        FakeIssuer issuer = new FakeIssuer();
+        FakeInstantSource timeSource = new FakeInstantSource(NOW);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer, timeSource);
+        issuer.failWith(failure);
+        assertThatThrownBy(provider::getAccessToken)
+                .isSameAs(failure);
+
+        // when
+        timeSource.moveTo(NOW.plusSeconds(59));
+
+        // then
+        assertThatThrownBy(provider::getAccessToken)
+                .isInstanceOfSatisfying(KisAuthException.class, exception -> {
+                    assertThat(exception).hasMessageContaining("재시도 대기");
+                    assertThat(exception.reason()).isEqualTo(KisAuthException.Reason.RETRY_DEFERRED);
+                    assertThat(exception.retryAt()).contains(NOW.plus(Duration.ofMinutes(1)));
+                    assertThat(exception).hasCause(failure);
+                });
+        assertThat(issuer.issueCount()).isEqualTo(1);
     }
+
+    @Test
+    void 만료_임박_토큰의_갱신에_실패해도_실제_만료_전이면_기존_토큰을_반환한다() {
+        // given
+        AccessToken expiring = new AccessToken("expiring-value", NOW.plus(Duration.ofMinutes(29)));
+        FakeIssuer issuer = new FakeIssuer(expiring);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer, InstantSource.fixed(NOW));
+        provider.getAccessToken();
+        issuer.failWith(new KisAuthException("발급 실패"));
+
+        // when
+        AccessToken fallback = provider.getAccessToken();
+
+        // then
+        assertThat(fallback).isSameAs(expiring);
+        assertThat(issuer.issueCount()).isEqualTo(2);
+    }
+
+    @Test
+    void 갱신_실패_후_backoff_중에는_발급을_요청하지_않고_기존_토큰을_반환한다() {
+        // given
+        AccessToken expiring = new AccessToken("expiring-value", NOW.plus(Duration.ofMinutes(29)));
+        FakeIssuer issuer = new FakeIssuer(expiring);
+        FakeInstantSource timeSource = new FakeInstantSource(NOW);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer, timeSource);
+        provider.getAccessToken();
+        issuer.failWith(new KisAuthException("발급 실패"));
+        provider.getAccessToken();
+
+        // when
+        timeSource.moveTo(NOW.plusSeconds(59));
+        AccessToken fallback = provider.getAccessToken();
+
+        // then
+        assertThat(fallback).isSameAs(expiring);
+        assertThat(issuer.issueCount()).isEqualTo(2);
+    }
+
+    @Test
+    void backoff가_끝나면_다시_갱신을_요청한다() {
+        // given
+        AccessToken expiring = new AccessToken("expiring-value", NOW.plus(Duration.ofMinutes(29)));
+        AccessToken renewed = new AccessToken("renewed-value", NOW.plus(Duration.ofHours(24)));
+        FakeIssuer issuer = new FakeIssuer(expiring, renewed);
+        FakeInstantSource timeSource = new FakeInstantSource(NOW);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(issuer, timeSource);
+        provider.getAccessToken();
+        issuer.failWith(new KisAuthException("발급 실패"));
+        provider.getAccessToken();
+
+        // when
+        timeSource.moveTo(NOW.plus(Duration.ofMinutes(1)));
+        issuer.recover();
+        AccessToken token = provider.getAccessToken();
+
+        // then
+        assertThat(token).isSameAs(renewed);
+        assertThat(issuer.issueCount()).isEqualTo(3);
+    }
+
 }

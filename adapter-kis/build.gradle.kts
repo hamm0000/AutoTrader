@@ -10,9 +10,9 @@ repositories {
 }
 
 dependencies {
-    implementation(platform("org.springframework:spring-framework-bom:6.2.1"))
+    implementation(platform("org.springframework:spring-framework-bom:7.0.8"))
     implementation("org.springframework:spring-web")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
+    implementation("tools.jackson.core:jackson-databind:3.1.4")
 
     testImplementation("org.springframework:spring-test")
     testImplementation("org.hamcrest:hamcrest:2.2")

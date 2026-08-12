@@ -9,6 +9,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withUnauthorizedRequest;
 
+import java.net.http.HttpTimeoutException;
 import java.time.Instant;
 import java.time.InstantSource;
 import org.junit.jupiter.api.Test;
@@ -58,6 +59,28 @@ class KisAccessTokenApiTest {
 
         // when & then
         assertThatThrownBy(api::issue).isInstanceOf(KisAuthException.class);
+    }
+
+    // 실제 대기 시간을 검증하지 않고 timeout 발생 시 오류 변환만 검증
+    @Test
+    void KIS_토큰_발급_요청의_응답_시간이_초과되면_timeout_실패로_변환한다() {
+        // given
+        HttpTimeoutException timeout = new HttpTimeoutException("응답 시간 초과");
+        RestClient restClient = RestClient.builder()
+                .requestFactory((uri, method) -> {
+                    throw timeout;
+                })
+                .build();
+        KisAccessTokenApi api = new KisAccessTokenApi(
+                restClient, APP_KEY, APP_SECRET, InstantSource.fixed(NOW));
+
+        // when & then
+        assertThatThrownBy(api::issue)
+                .isInstanceOfSatisfying(KisAuthException.class, exception -> {
+                    assertThat(exception).hasMessageContaining("시간이 초과");
+                    assertThat(exception.reason()).isEqualTo(KisAuthException.Reason.ISSUE_TIMEOUT);
+                    assertThat(exception).hasRootCauseInstanceOf(HttpTimeoutException.class);
+                });
     }
 
     @Test
