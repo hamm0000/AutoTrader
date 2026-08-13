@@ -33,6 +33,26 @@ target_include_directories(
 
 target_compile_features(zscore_strategy PUBLIC cxx_std_17)
 
+add_library(
+    zscore_json
+    src/zscore_json.cpp
+)
+
+target_include_directories(
+    zscore_json
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(
+    zscore_json
+    PUBLIC
+        zscore_strategy
+        nlohmann_json::nlohmann_json
+)
+
+target_compile_features(zscore_json PUBLIC cxx_std_17)
+
 if(AUTOTRADER_STRATEGY_BUILD_TESTS)
     enable_testing()
     autotrader_strategy_fetch_test_dependencies()
