@@ -20,6 +20,19 @@ include(cmake/Dependencies.cmake)
 
 autotrader_strategy_fetch_runtime_dependencies()
 
+add_library(
+    zscore_strategy
+    src/zscore_strategy.cpp
+)
+
+target_include_directories(
+    zscore_strategy
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_compile_features(zscore_strategy PUBLIC cxx_std_17)
+
 if(AUTOTRADER_STRATEGY_BUILD_TESTS)
     enable_testing()
     autotrader_strategy_fetch_test_dependencies()
