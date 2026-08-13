@@ -53,6 +53,37 @@ target_link_libraries(
 
 target_compile_features(zscore_json PUBLIC cxx_std_17)
 
+add_library(
+    zscore_http_server
+    src/zscore_http_server.cpp
+)
+
+target_include_directories(
+    zscore_http_server
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(
+    zscore_http_server
+    PUBLIC
+        zscore_json
+        httplib::httplib
+)
+
+target_compile_features(zscore_http_server PUBLIC cxx_std_17)
+
+add_executable(
+    zscore_server
+    src/main.cpp
+)
+
+target_link_libraries(
+    zscore_server
+    PRIVATE
+        zscore_http_server
+)
+
 if(AUTOTRADER_STRATEGY_BUILD_TESTS)
     enable_testing()
     autotrader_strategy_fetch_test_dependencies()

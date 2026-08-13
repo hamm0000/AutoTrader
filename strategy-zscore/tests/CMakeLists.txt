@@ -27,3 +27,17 @@ target_link_libraries(
 )
 
 gtest_discover_tests(zscore_json_contract_test)
+
+add_executable(
+    zscore_http_contract_test
+    zscore_http_contract_test.cpp
+)
+
+target_link_libraries(
+    zscore_http_contract_test
+    PRIVATE
+        zscore_http_server
+        GTest::gtest_main
+)
+
+gtest_discover_tests(zscore_http_contract_test)
