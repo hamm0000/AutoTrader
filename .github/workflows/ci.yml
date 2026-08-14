@@ -38,3 +38,21 @@ jobs:
 
       - name: Build and test
         run: ./gradlew build --no-daemon
+
+  build-cpp:
+    name: Build and test C++ strategy module
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Configure CMake
+        run: cmake -S strategy-zscore -B strategy-zscore/build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build strategy-zscore/build --config Release --parallel
+
+      - name: Run tests
+        run: ctest --test-dir strategy-zscore/build --output-on-failure
