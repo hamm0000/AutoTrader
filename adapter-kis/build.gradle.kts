@@ -10,6 +10,7 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":trading"))
     implementation(platform("org.springframework:spring-framework-bom:7.0.8"))
     implementation("org.springframework:spring-web")
     implementation("tools.jackson.core:jackson-databind:3.1.4")
