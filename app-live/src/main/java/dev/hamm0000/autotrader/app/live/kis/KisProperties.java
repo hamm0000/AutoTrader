@@ -1,11 +1,11 @@
-package dev.hamm0000.autotrader.app.live.kis.auth;
+package dev.hamm0000.autotrader.app.live.kis;
 
 import java.net.URI;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("autotrader.kis")
-record KisAuthProperties(
+public record KisProperties(
         URI baseUrl,
         String appKey,
         String appSecret,
@@ -14,7 +14,7 @@ record KisAuthProperties(
     private static final URI PAPER_BASE_URL =
             URI.create("https://openapivts.koreainvestment.com:29443");
 
-    void validate() {
+    public void validate() {
         if (!PAPER_BASE_URL.equals(baseUrl)) {
             throw new IllegalStateException("KIS 인증은 모의투자 URL만 허용합니다");
         }
@@ -28,7 +28,7 @@ record KisAuthProperties(
 
     @Override
     public String toString() {
-        return "KisAuthProperties[baseUrl=" + baseUrl
+        return "KisProperties[baseUrl=" + baseUrl
                 + ", appKey=***, appSecret=***, requestTimeout=" + requestTimeout + "]";
     }
 }

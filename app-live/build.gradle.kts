@@ -12,7 +12,9 @@ repositories {
 
 dependencies {
     implementation(platform("org.springframework.boot:spring-boot-dependencies:4.1.0"))
+    implementation(project(":trading"))
     implementation(project(":adapter-kis"))
+    implementation(project(":adapter-strategy"))
     implementation("org.springframework.boot:spring-boot-starter-restclient")
 
     testImplementation("org.assertj:assertj-core")

@@ -2,7 +2,9 @@ package dev.hamm0000.autotrader.app.live.kis.auth;
 
 import dev.hamm0000.autotrader.adapter.kis.auth.KisAccessTokenApi;
 import dev.hamm0000.autotrader.adapter.kis.auth.KisAccessTokenProvider;
+import dev.hamm0000.autotrader.app.live.kis.KisProperties;
 import java.time.InstantSource;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -12,7 +14,7 @@ import org.springframework.web.client.RestClient;
 class KisAuthConfiguration {
 
     @Bean
-    RestClient kisRestClient(RestClient.Builder builder, KisAuthProperties properties) {
+    RestClient kisRestClient(RestClient.Builder builder, KisProperties properties) {
         properties.validate();
 
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory();
@@ -31,8 +33,8 @@ class KisAuthConfiguration {
 
     @Bean
     KisAccessTokenApi kisAccessTokenApi(
-            RestClient kisRestClient,
-            KisAuthProperties properties,
+            @Qualifier("kisRestClient") RestClient kisRestClient,
+            KisProperties properties,
             InstantSource instantSource) {
         return new KisAccessTokenApi(
                 kisRestClient,

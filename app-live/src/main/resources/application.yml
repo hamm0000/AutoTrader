@@ -8,3 +8,7 @@ autotrader:
     app-key: ${KIS_PAPER_APP_KEY:}
     app-secret: ${KIS_PAPER_APP_SECRET:}
     request-timeout: 5s
+  strategy:
+    zscore:
+      base-url: ${ZSCORE_SERVER_BASE_URL:}
+      request-timeout: ${ZSCORE_SERVER_REQUEST_TIMEOUT:}
