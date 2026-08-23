@@ -20,7 +20,7 @@ class ZScoreConfiguration {
         properties.validate();
 
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory();
-        requestFactory.setReadTimeout(properties.requestTimeout());
+        requestFactory.setReadTimeout(properties.requestTimeout()); //추후 변경
 
         return builder.clone()
                 .baseUrl(properties.baseUrl().toString())
