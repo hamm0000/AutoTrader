@@ -1,9 +1,9 @@
 package dev.hamm0000.autotrader.adapter.strategy.zscore.http;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import dev.hamm0000.autotrader.trading.strategy.application.port.out.zscore.ZScoreEvaluationException;
-import dev.hamm0000.autotrader.trading.strategy.application.port.out.zscore.ZScoreEvaluationResult;
-import dev.hamm0000.autotrader.trading.strategy.domain.StrategySignal;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationException;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationResult;
+import dev.hamm0000.autotrader.trading.strategy.zscore.domain.StrategySignal;
 
 record ZScoreHttpResponse(
         String signal,

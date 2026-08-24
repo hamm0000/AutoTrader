@@ -1,9 +1,9 @@
 package dev.hamm0000.autotrader.adapter.strategy.zscore.http;
 
-import dev.hamm0000.autotrader.trading.strategy.application.port.out.zscore.EvaluateZScoreStrategy;
-import dev.hamm0000.autotrader.trading.strategy.application.port.out.zscore.ZScoreEvaluationException;
-import dev.hamm0000.autotrader.trading.strategy.application.port.out.zscore.ZScoreEvaluationRequest;
-import dev.hamm0000.autotrader.trading.strategy.application.port.out.zscore.ZScoreEvaluationResult;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.EvaluateZScoreStrategy;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationException;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationRequest;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationResult;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConversionException;
 import org.springframework.web.client.RestClient;

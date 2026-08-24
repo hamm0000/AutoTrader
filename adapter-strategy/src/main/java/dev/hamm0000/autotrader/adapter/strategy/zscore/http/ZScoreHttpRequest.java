@@ -1,7 +1,7 @@
 package dev.hamm0000.autotrader.adapter.strategy.zscore.http;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import dev.hamm0000.autotrader.trading.strategy.application.port.out.zscore.ZScoreEvaluationRequest;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationRequest;
 
 import java.util.List;
 
