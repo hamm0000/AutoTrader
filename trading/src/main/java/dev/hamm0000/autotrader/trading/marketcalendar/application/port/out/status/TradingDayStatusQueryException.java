@@ -1,4 +1,4 @@
-package dev.hamm0000.autotrader.trading.marketcalendar.application.port.out;
+package dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.status;
 
 import java.util.Objects;
 

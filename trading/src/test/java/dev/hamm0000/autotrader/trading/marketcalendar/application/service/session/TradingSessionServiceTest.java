@@ -1,11 +1,11 @@
-package dev.hamm0000.autotrader.trading.marketcalendar.application.service;
+package dev.hamm0000.autotrader.trading.marketcalendar.application.service.session;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import dev.hamm0000.autotrader.trading.marketcalendar.application.port.in.TradingSessionCheckCommand;
-import dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.TradingCalendarQueryException;
-import dev.hamm0000.autotrader.trading.marketcalendar.application.service.testdouble.StubTradingCalendarFinder;
+import dev.hamm0000.autotrader.trading.marketcalendar.application.port.in.session.TradingSessionCheckCommand;
+import dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.calendar.TradingCalendarQueryException;
+import dev.hamm0000.autotrader.trading.marketcalendar.application.service.session.testdouble.StubTradingCalendarFinder;
 import dev.hamm0000.autotrader.trading.marketcalendar.domain.CalendarPeriod;
 import dev.hamm0000.autotrader.trading.marketcalendar.domain.MarketSession;
 import dev.hamm0000.autotrader.trading.marketcalendar.domain.TradingCalendar;

@@ -1,4 +1,4 @@
-package dev.hamm0000.autotrader.trading.marketcalendar.application.port.out;
+package dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.status;
 
 import dev.hamm0000.autotrader.trading.marketcalendar.domain.TradingDayStatus;
 import java.time.LocalDate;

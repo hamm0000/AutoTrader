@@ -1,4 +1,4 @@
-package dev.hamm0000.autotrader.trading.marketcalendar.application.port.out;
+package dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.status;
 
 import dev.hamm0000.autotrader.trading.marketcalendar.domain.CalendarPeriod;
 import java.time.LocalDate;
@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 조회 범위의 날짜 별 개장 여부(조회범위와 일치하고, 오름차순인지)
+ * 조회 범위와 일치하고 날짜 오름차순으로 정렬된 날짜별 개장 여부입니다.
  */
 public record TradingDayStatuses(
         CalendarPeriod coverage,

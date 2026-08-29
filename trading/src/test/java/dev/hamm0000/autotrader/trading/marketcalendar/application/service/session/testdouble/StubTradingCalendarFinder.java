@@ -1,7 +1,7 @@
-package dev.hamm0000.autotrader.trading.marketcalendar.application.service.testdouble;
+package dev.hamm0000.autotrader.trading.marketcalendar.application.service.session.testdouble;
 
-import dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.FindTradingCalendar;
-import dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.TradingCalendarQueryException;
+import dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.calendar.FindTradingCalendar;
+import dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.calendar.TradingCalendarQueryException;
 import dev.hamm0000.autotrader.trading.marketcalendar.domain.CalendarPeriod;
 import dev.hamm0000.autotrader.trading.marketcalendar.domain.TradingCalendar;
 import java.util.Objects;

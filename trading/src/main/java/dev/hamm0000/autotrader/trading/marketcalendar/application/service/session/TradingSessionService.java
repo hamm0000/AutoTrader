@@ -1,9 +1,9 @@
-package dev.hamm0000.autotrader.trading.marketcalendar.application.service;
+package dev.hamm0000.autotrader.trading.marketcalendar.application.service.session;
 
-import dev.hamm0000.autotrader.trading.marketcalendar.application.port.in.CheckTradingSession;
-import dev.hamm0000.autotrader.trading.marketcalendar.application.port.in.TradingSessionCheckCommand;
-import dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.FindTradingCalendar;
-import dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.TradingCalendarQueryException;
+import dev.hamm0000.autotrader.trading.marketcalendar.application.port.in.session.CheckTradingSession;
+import dev.hamm0000.autotrader.trading.marketcalendar.application.port.in.session.TradingSessionCheckCommand;
+import dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.calendar.FindTradingCalendar;
+import dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.calendar.TradingCalendarQueryException;
 import dev.hamm0000.autotrader.trading.marketcalendar.domain.CalendarPeriod;
 import dev.hamm0000.autotrader.trading.marketcalendar.domain.TradingCalendar;
 import dev.hamm0000.autotrader.trading.marketcalendar.domain.TradingSessionDecision;
@@ -14,7 +14,7 @@ import java.util.Optional;
 
 /**
  * 저장된 거래 캘린더를 조회해 런타임의 시장 준비 여부를 판단합니다.
- * 이때 캘린더 부재는 부팅 실패로 전파하지 않고 degraed로 시작합니다.
+ * 이때 캘린더 부재는 부팅 실패로 전파하지 않고 degraded로 시작합니다.
  */
 public final class TradingSessionService implements CheckTradingSession {
 

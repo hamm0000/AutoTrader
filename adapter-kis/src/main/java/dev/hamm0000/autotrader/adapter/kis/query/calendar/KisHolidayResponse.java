@@ -1,11 +1,11 @@
 package dev.hamm0000.autotrader.adapter.kis.query.calendar;
 
-import static dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.TradingDayStatusQueryException.invalidResponse;
-import static dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.TradingDayStatusQueryException.providerUnavailable;
+import static dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.status.TradingDayStatusQueryException.invalidResponse;
+import static dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.status.TradingDayStatusQueryException.providerUnavailable;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.TradingDayStatusObservation;
+import dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.status.TradingDayStatusObservation;
 import dev.hamm0000.autotrader.trading.marketcalendar.domain.TradingDayStatus;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;

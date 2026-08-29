@@ -1,7 +1,7 @@
 package dev.hamm0000.autotrader.adapter.kis.query.calendar;
 
-import static dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.TradingDayStatusQueryException.invalidResponse;
-import static dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.TradingDayStatusQueryException.providerUnavailable;
+import static dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.status.TradingDayStatusQueryException.invalidResponse;
+import static dev.hamm0000.autotrader.trading.marketcalendar.application.port.out.status.TradingDayStatusQueryException.providerUnavailable;
 
 import dev.hamm0000.autotrader.adapter.kis.auth.AccessToken;
 import dev.hamm0000.autotrader.adapter.kis.auth.KisAccessTokenProvider;

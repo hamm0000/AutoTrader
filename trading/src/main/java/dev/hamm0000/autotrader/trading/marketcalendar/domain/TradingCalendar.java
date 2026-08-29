@@ -25,13 +25,13 @@ public final class TradingCalendar {
         this.valuesByDate = validateAndIndex(this.values);
     }
 
-//    public CalendarPeriod coverage() {
-//        return coverage;
-//    }
-//
-//    public List<TradingDay> values() {
-//        return values;
-//    }
+    public CalendarPeriod coverage() {
+        return coverage;
+    }
+
+    public List<TradingDay> values() {
+        return values;
+    }
 
     public Optional<TradingDay> find(LocalDate date) {
         Objects.requireNonNull(date, "date must not be null");
