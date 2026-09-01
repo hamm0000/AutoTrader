@@ -8,7 +8,7 @@ import java.net.URI;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
-class KisPropertiesTest {
+class KisPaperPropertiesTest {
 
     private static final URI PAPER_BASE_URL =
             URI.create("https://openapivts.koreainvestment.com:29443");
@@ -16,7 +16,7 @@ class KisPropertiesTest {
     @Test
     void 모의투자_주소와_키가_있으면_KIS를_설정할_수_있다() {
         // given
-        KisProperties properties = new KisProperties(
+        KisPaperProperties properties = new KisPaperProperties(
                 PAPER_BASE_URL,
                 "test-app-key",
                 "test-app-secret",
@@ -29,7 +29,7 @@ class KisPropertiesTest {
     @Test
     void 모의투자_URL이_아니면_KIS를_설정할_수_없다() {
         // given
-        KisProperties properties = new KisProperties(
+        KisPaperProperties properties = new KisPaperProperties(
                 URI.create("https://notpaper.com"),
                 "test-app-key",
                 "test-app-secret",
@@ -44,7 +44,7 @@ class KisPropertiesTest {
     @Test
     void 자격증명이_비어_있으면_KIS를_설정할_수_없다() {
         // given
-        KisProperties properties = new KisProperties(
+        KisPaperProperties properties = new KisPaperProperties(
                 PAPER_BASE_URL,
                 "",
                 "",
@@ -59,7 +59,7 @@ class KisPropertiesTest {
     @Test
     void 설정을_문자열로_표현해도_자격증명은_노출하지_않는다() {
         // given
-        KisProperties properties = new KisProperties(
+        KisPaperProperties properties = new KisPaperProperties(
                 PAPER_BASE_URL,
                 "sensitive-app-key",
                 "sensitive-app-secret",

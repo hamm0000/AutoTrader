@@ -1,0 +1,19 @@
+spring:
+  main:
+    web-application-type: none
+  datasource:
+    url: ${AUTOTRADER_POSTGRES_URL:jdbc:postgresql://localhost:5432/autotrader}
+    username: ${POSTGRES_USER:autotrader}
+    password: ${POSTGRES_PASSWORD:autotrader}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+autotrader:
+  kis:
+    production:
+      base-url: https://openapi.koreainvestment.com:9443
+      app-key: ${KIS_PROD_APP_KEY:}
+      app-secret: ${KIS_PROD_APP_SECRET:}
+      request-timeout: ${KIS_PROD_REQUEST_TIMEOUT:5s}

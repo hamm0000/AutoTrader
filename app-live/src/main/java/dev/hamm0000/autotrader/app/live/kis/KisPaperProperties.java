@@ -4,8 +4,8 @@ import java.net.URI;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties("autotrader.kis")
-public record KisProperties(
+@ConfigurationProperties("autotrader.kis.paper")
+public record KisPaperProperties(
         URI baseUrl,
         String appKey,
         String appSecret,
@@ -28,7 +28,7 @@ public record KisProperties(
 
     @Override
     public String toString() {
-        return "KisProperties[baseUrl=" + baseUrl
+        return "KisPaperProperties[baseUrl=" + baseUrl
                 + ", appKey=***, appSecret=***, requestTimeout=" + requestTimeout + "]";
     }
 }
