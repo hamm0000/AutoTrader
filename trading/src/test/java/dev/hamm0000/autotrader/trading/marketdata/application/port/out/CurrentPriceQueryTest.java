@@ -8,6 +8,10 @@ class CurrentPriceQueryTest {
 
     @Test
     void 종목이_비어_있으면_현재가를_요청할_수_없다() {
-        assertThrows(IllegalArgumentException.class, () -> new CurrentPriceQuery(" "));
+        // given
+        String symbol = " ";
+
+        // when & then
+        assertThrows(IllegalArgumentException.class, () -> new CurrentPriceQuery(symbol));
     }
 }

@@ -13,34 +13,41 @@ class RecentClosingPricesTest {
 
     @Test
     void 생성_후_원본_목록이_바뀌어도_최근_종가는_변하지_않는다() {
+        // given
         List<DailyClosingPrice> source = new ArrayList<>(List.of(
                 closingPrice("2026-08-13", "70000"),
                 closingPrice("2026-08-14", "71000")
         ));
         RecentClosingPrices closingPrices = new RecentClosingPrices(source);
 
+        // when
         source.add(closingPrice("2026-08-15", "72000"));
 
+        // then
         assertEquals(2, closingPrices.values().size());
     }
 
     @Test
     void 최근_종가가_최신일부터_정렬되어_있으면_만들_수_없다() {
+        // given
         List<DailyClosingPrice> newestFirst = List.of(
                 closingPrice("2026-08-14", "71000"),
                 closingPrice("2026-08-13", "70000")
         );
 
+        // when & then
         assertThrows(IllegalArgumentException.class, () -> new RecentClosingPrices(newestFirst));
     }
 
     @Test
     void 같은_거래일의_종가가_중복되면_만들_수_없다() {
+        // given
         List<DailyClosingPrice> duplicatedDate = List.of(
                 closingPrice("2026-08-14", "70000"),
                 closingPrice("2026-08-14", "71000")
         );
 
+        // when & then
         assertThrows(IllegalArgumentException.class, () -> new RecentClosingPrices(duplicatedDate));
     }
 

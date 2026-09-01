@@ -4,7 +4,26 @@ spring:
 
 autotrader:
   kis:
-    base-url: https://openapivts.koreainvestment.com:29443
-    app-key: ${KIS_PAPER_APP_KEY:}
-    app-secret: ${KIS_PAPER_APP_SECRET:}
-    request-timeout: 5s
+    paper:
+      base-url: https://openapivts.koreainvestment.com:29443
+      app-key: ${KIS_PAPER_APP_KEY:}
+      app-secret: ${KIS_PAPER_APP_SECRET:}
+      request-timeout: 5s
+  strategy:
+    zscore:
+      base-url: ${ZSCORE_SERVER_BASE_URL:}
+      request-timeout: ${ZSCORE_SERVER_REQUEST_TIMEOUT:}
+  market-calendar:
+    refresh:
+      coverage-days: ${MARKET_CALENDAR_COVERAGE_DAYS:20}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: "!market-calendar-refresh"
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+      - org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
+      - org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration

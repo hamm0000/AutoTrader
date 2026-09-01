@@ -12,17 +12,26 @@ class RecentClosingPricesQueryTest {
 
     @Test
     void 한_거래일의_종가부터_요청할_수_있다() {
+        // given
+        String symbol = "005930";
+        int count = 1;
+
+        // when & then
         assertDoesNotThrow(() -> new RecentClosingPricesQuery(
-                "005930",
-                1,
+                symbol,
+                count,
                 END_DATE_EXCLUSIVE
         ));
     }
 
     @Test
     void 종목이_비어_있으면_종가를_요청할_수_없다() {
+        // given
+        String symbol = " ";
+
+        // when & then
         assertThrows(IllegalArgumentException.class, () -> new RecentClosingPricesQuery(
-                " ",
+                symbol,
                 1,
                 END_DATE_EXCLUSIVE
         ));
@@ -30,9 +39,13 @@ class RecentClosingPricesQueryTest {
 
     @Test
     void 요청한_거래일_수가_0이면_종가를_요청할_수_없다() {
+        // given
+        int count = 0;
+
+        // when & then
         assertThrows(IllegalArgumentException.class, () -> new RecentClosingPricesQuery(
                 "005930",
-                0,
+                count,
                 END_DATE_EXCLUSIVE
         ));
     }
