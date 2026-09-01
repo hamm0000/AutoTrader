@@ -2,6 +2,7 @@ package dev.hamm0000.autotrader.adapter.postgres.marketcalendar;
 
 import dev.hamm0000.autotrader.adapter.postgres.marketcalendar.calendar.TradingCalendarPersistenceAdapter;
 import dev.hamm0000.autotrader.adapter.postgres.marketcalendar.specialsession.MarketSessionOverridePersistenceAdapter;
+import dev.hamm0000.autotrader.adapter.postgres.strategy.zscore.ZScoreTradePlanPersistenceAdapter;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
@@ -13,11 +14,12 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @SpringBootConfiguration
 @EnableAutoConfiguration
-@EntityScan("dev.hamm0000.autotrader.adapter.postgres.marketcalendar")
-@EnableJpaRepositories("dev.hamm0000.autotrader.adapter.postgres.marketcalendar")
+@EntityScan("dev.hamm0000.autotrader.adapter.postgres")
+@EnableJpaRepositories("dev.hamm0000.autotrader.adapter.postgres")
 @Import({
         TradingCalendarPersistenceAdapter.class,
-        MarketSessionOverridePersistenceAdapter.class
+        MarketSessionOverridePersistenceAdapter.class,
+        ZScoreTradePlanPersistenceAdapter.class
 })
 public class PostgresAdapterTestApplication {
 
