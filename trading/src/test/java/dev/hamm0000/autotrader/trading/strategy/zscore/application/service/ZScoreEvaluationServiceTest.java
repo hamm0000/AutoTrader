@@ -11,6 +11,7 @@ import dev.hamm0000.autotrader.trading.marketdata.application.port.out.RecentClo
 import dev.hamm0000.autotrader.trading.marketdata.domain.CurrentPrice;
 import dev.hamm0000.autotrader.trading.marketdata.domain.DailyClosingPrice;
 import dev.hamm0000.autotrader.trading.marketdata.domain.RecentClosingPrices;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.EvaluatedZScore;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.ZScoreEvaluationCommand;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationException;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationRequest;
@@ -34,9 +35,8 @@ class ZScoreEvaluationServiceTest {
     void 조회한_시장_가격을_전략에_전달하고_평가_결과를_반환한다() {
         // given
         StubRecentClosingPricesLoader closingPrices = new StubRecentClosingPricesLoader(closingPrices());
-        StubCurrentPriceLoader currentPrice = new StubCurrentPriceLoader(
-                new CurrentPrice(new BigDecimal("103"))
-        );
+        CurrentPrice evaluatedPrice = new CurrentPrice(new BigDecimal("103"));
+        StubCurrentPriceLoader currentPrice = new StubCurrentPriceLoader(evaluatedPrice);
         ZScoreEvaluationResult expected = new ZScoreEvaluationResult(
                 StrategySignal.BUY,
                 -2.1,
@@ -48,7 +48,7 @@ class ZScoreEvaluationServiceTest {
         ZScoreEvaluationService service = new ZScoreEvaluationService(closingPrices, currentPrice, strategy);
 
         // when
-        ZScoreEvaluationResult actual = service.evaluate(command());
+        EvaluatedZScore actual = service.evaluate(command());
 
         // then
         assertAll(
@@ -66,7 +66,10 @@ class ZScoreEvaluationServiceTest {
                         ),
                         strategy.request()
                 ),
-                () -> assertEquals(expected, actual)
+                () -> assertEquals(
+                        new EvaluatedZScore(SYMBOL, evaluatedPrice, expected),
+                        actual
+                )
         );
     }
 
