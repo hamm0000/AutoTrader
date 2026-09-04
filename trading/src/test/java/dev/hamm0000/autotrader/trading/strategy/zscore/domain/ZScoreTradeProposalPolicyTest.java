@@ -21,9 +21,9 @@ class ZScoreTradeProposalPolicyTest {
     private final ZScoreTradeProposalPolicy policy = new ZScoreTradeProposalPolicy();
 
     @Test
-    void 보유수량과_진행중인_주문이_없으면_BUDGET_안에서_살_수_있는_정수수량을_제안한다() {
+    void 보유수량이_없으면_BUDGET_안에서_살_수_있는_정수수량을_제안한다() {
         // when
-        Optional<TradeProposal> proposal = propose(StrategySignal.BUY, position(0), false);
+        Optional<TradeProposal> proposal = propose(StrategySignal.BUY, position(0));
 
         // then
         assertEquals(
@@ -45,8 +45,7 @@ class ZScoreTradeProposalPolicyTest {
                 currentPrice("10000001"),
                 PURCHASE_BUDGET,
                 StrategySignal.BUY,
-                position(0),
-                false
+                position(0)
         );
 
         // then
@@ -56,18 +55,13 @@ class ZScoreTradeProposalPolicyTest {
     @Test
     void 이미_보유한_종목이면_추가_매수를_제안하지_않는다() {
 
-        assertTrue(propose(StrategySignal.BUY, position(1), false).isEmpty());
-    }
-
-    @Test
-    void 매수_주문이_진행중이면_중복_매수를_제안하지_않는다() {
-        assertTrue(propose(StrategySignal.BUY, position(0), true).isEmpty());
+        assertTrue(propose(StrategySignal.BUY, position(1)).isEmpty());
     }
 
     @Test
     void 보유한_종목에_매도_신호가_오면_전체_수량의_매도를_제안한다() {
         // when
-        Optional<TradeProposal> proposal = propose(StrategySignal.SELL, position(7), false);
+        Optional<TradeProposal> proposal = propose(StrategySignal.SELL, position(7));
 
         // then
         assertEquals(Optional.of(new SellProposal(SYMBOL, 7)), proposal);
@@ -75,31 +69,24 @@ class ZScoreTradeProposalPolicyTest {
 
     @Test
     void 보유수량이_없으면_매도를_제안하지_않는다() {
-        assertTrue(propose(StrategySignal.SELL, position(0), false).isEmpty());
-    }
-
-    @Test
-    void 매도_주문이_진행중이면_중복_매도를_제안하지_않는다() {
-        assertTrue(propose(StrategySignal.SELL, position(7), true).isEmpty());
+        assertTrue(propose(StrategySignal.SELL, position(0)).isEmpty());
     }
 
     @Test
     void HOLD_신호면_주문을_제안하지_않는다() {
-        assertTrue(propose(StrategySignal.HOLD, position(0), false).isEmpty());
+        assertTrue(propose(StrategySignal.HOLD, position(0)).isEmpty());
     }
 
     private Optional<TradeProposal> propose(
             StrategySignal signal,
-            Position position,
-            boolean hasOpenOrder
+            Position position
     ) {
         return policy.propose(
                 SYMBOL,
                 CURRENT_PRICE,
                 PURCHASE_BUDGET,
                 signal,
-                position,
-                hasOpenOrder
+                position
         );
     }
 

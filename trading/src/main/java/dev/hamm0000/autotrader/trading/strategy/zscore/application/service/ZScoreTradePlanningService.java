@@ -1,8 +1,5 @@
 package dev.hamm0000.autotrader.trading.strategy.zscore.application.service;
 
-import dev.hamm0000.autotrader.trading.order.application.port.out.CheckOpenOrder;
-import dev.hamm0000.autotrader.trading.order.application.port.out.OpenOrderQuery;
-import dev.hamm0000.autotrader.trading.order.domain.OrderSide;
 import dev.hamm0000.autotrader.trading.position.application.port.out.LoadPosition;
 import dev.hamm0000.autotrader.trading.position.application.port.out.PositionQuery;
 import dev.hamm0000.autotrader.trading.position.domain.Position;
@@ -24,7 +21,6 @@ public final class ZScoreTradePlanningService implements PlanZScoreTrade {
 
     private final EvaluateZScore evaluateZScore;
     private final LoadPosition loadPosition;
-    private final CheckOpenOrder checkOpenOrder;
     private final ZScoreTradeProposalPolicy proposalPolicy;
     private final SaveZScoreTradePlan saveZScoreTradePlan;
     private final InstantSource timeSource;
@@ -32,14 +28,12 @@ public final class ZScoreTradePlanningService implements PlanZScoreTrade {
     public ZScoreTradePlanningService(
             EvaluateZScore evaluateZScore,
             LoadPosition loadPosition,
-            CheckOpenOrder checkOpenOrder,
             ZScoreTradeProposalPolicy proposalPolicy,
             SaveZScoreTradePlan saveZScoreTradePlan,
             InstantSource timeSource
     ) {
         this.evaluateZScore = Objects.requireNonNull(evaluateZScore, "evaluateZScore must not be null");
         this.loadPosition = Objects.requireNonNull(loadPosition, "loadPosition must not be null");
-        this.checkOpenOrder = Objects.requireNonNull(checkOpenOrder, "checkOpenOrder must not be null");
         this.proposalPolicy = Objects.requireNonNull(
                 proposalPolicy,
                 "proposalPolicy must not be null"
@@ -61,7 +55,7 @@ public final class ZScoreTradePlanningService implements PlanZScoreTrade {
         if (signal == StrategySignal.HOLD) {
             plan = new ZScoreTradePlan(evaluation, Optional.empty());
         } else {
-            plan = planOrder(command, evaluation, signal);
+            plan = planProposal(command, evaluation, signal);
         }
         saveZScoreTradePlan.save(new SaveZScoreTradePlanCommand(
                 command,
@@ -71,21 +65,18 @@ public final class ZScoreTradePlanningService implements PlanZScoreTrade {
         return plan;
     }
 
-    private ZScoreTradePlan planOrder(
+    private ZScoreTradePlan planProposal(
             ZScoreTradePlanningCommand command,
             EvaluatedZScore evaluation,
             StrategySignal signal
     ) {
-        OrderSide side = signal == StrategySignal.BUY ? OrderSide.BUY : OrderSide.SELL;
         Position position = loadPosition.load(new PositionQuery(evaluation.symbol()));
-        boolean hasOpenOrder = checkOpenOrder.exists(new OpenOrderQuery(evaluation.symbol(), side));
         Optional<TradeProposal> proposal = proposalPolicy.propose(
                 evaluation.symbol(),
                 evaluation.currentPrice(),
                 command.purchaseBudget(),
                 signal,
-                position,
-                hasOpenOrder
+                position
         );
         return new ZScoreTradePlan(evaluation, proposal);
     }

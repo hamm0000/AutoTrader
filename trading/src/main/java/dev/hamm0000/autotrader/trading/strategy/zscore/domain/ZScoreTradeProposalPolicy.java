@@ -20,8 +20,7 @@ public final class ZScoreTradeProposalPolicy {
             CurrentPrice currentPrice,
             BigDecimal purchaseBudget,
             StrategySignal signal,
-            Position position,
-            boolean hasOpenOrder
+            Position position
     ) {
         Objects.requireNonNull(symbol, "symbol must not be null");
         Objects.requireNonNull(currentPrice, "currentPrice must not be null");
@@ -40,7 +39,7 @@ public final class ZScoreTradeProposalPolicy {
         if (!symbol.equals(position.symbol())) {
             throw new IllegalArgumentException("position symbol must match proposal symbol");
         }
-        if (signal == StrategySignal.HOLD || hasOpenOrder) {
+        if (signal == StrategySignal.HOLD) {
             return Optional.empty();
         }
 

@@ -6,8 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import dev.hamm0000.autotrader.trading.marketdata.domain.CurrentPrice;
-import dev.hamm0000.autotrader.trading.order.application.port.out.OpenOrderQuery;
-import dev.hamm0000.autotrader.trading.order.domain.OrderSide;
 import dev.hamm0000.autotrader.trading.position.application.port.out.PositionQuery;
 import dev.hamm0000.autotrader.trading.position.domain.Position;
 import dev.hamm0000.autotrader.trading.proposal.domain.BuyProposal;
@@ -19,7 +17,6 @@ import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.ZScor
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.SaveZScoreTradePlanCommand;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationException;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationResult;
-import dev.hamm0000.autotrader.trading.strategy.zscore.application.service.testdouble.SpyOpenOrderChecker;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.service.testdouble.SpyPositionLoader;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.service.testdouble.SpyZScoreTradePlanSaver;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.service.testdouble.SpyZScoreEvaluator;
@@ -46,9 +43,8 @@ class ZScoreTradePlanningServiceTest {
         // given
         SpyZScoreEvaluator evaluator = new SpyZScoreEvaluator(evaluation(StrategySignal.BUY));
         SpyPositionLoader positions = new SpyPositionLoader(new Position(SYMBOL, 0));
-        SpyOpenOrderChecker openOrders = new SpyOpenOrderChecker(false);
         SpyZScoreTradePlanSaver plans = new SpyZScoreTradePlanSaver();
-        ZScoreTradePlanningService service = service(evaluator, positions, openOrders, plans);
+        ZScoreTradePlanningService service = service(evaluator, positions, plans);
 
         // when
         ZScoreTradePlan plan = service.plan(command());
@@ -57,10 +53,6 @@ class ZScoreTradePlanningServiceTest {
         assertAll(
                 () -> assertEquals(evaluationCommand(), evaluator.command()),
                 () -> assertEquals(new PositionQuery(SYMBOL), positions.query()),
-                () -> assertEquals(
-                        new OpenOrderQuery(SYMBOL, OrderSide.BUY),
-                        openOrders.query()
-                ),
                 () -> assertEquals(evaluation(StrategySignal.BUY), plan.evaluation()),
                 () -> assertEquals(
                         Optional.of(new BuyProposal(
@@ -83,9 +75,8 @@ class ZScoreTradePlanningServiceTest {
         // given
         SpyZScoreEvaluator evaluator = new SpyZScoreEvaluator(evaluation(StrategySignal.SELL));
         SpyPositionLoader positions = new SpyPositionLoader(new Position(SYMBOL, 7));
-        SpyOpenOrderChecker openOrders = new SpyOpenOrderChecker(false);
         SpyZScoreTradePlanSaver plans = new SpyZScoreTradePlanSaver();
-        ZScoreTradePlanningService service = service(evaluator, positions, openOrders, plans);
+        ZScoreTradePlanningService service = service(evaluator, positions, plans);
 
         // when
         ZScoreTradePlan plan = service.plan(command());
@@ -94,10 +85,6 @@ class ZScoreTradePlanningServiceTest {
         assertAll(
                 () -> assertEquals(evaluationCommand(), evaluator.command()),
                 () -> assertEquals(new PositionQuery(SYMBOL), positions.query()),
-                () -> assertEquals(
-                        new OpenOrderQuery(SYMBOL, OrderSide.SELL),
-                        openOrders.query()
-                ),
                 () -> assertEquals(evaluation(StrategySignal.SELL), plan.evaluation()),
                 () -> assertEquals(
                         Optional.of(new SellProposal(SYMBOL, 7)),
@@ -111,28 +98,26 @@ class ZScoreTradePlanningServiceTest {
     }
 
     @Test
-    void HOLD면_보유수량과_진행중인_주문을_조회하지_않는다() {
+    void HOLD면_보유수량을_조회하지_않는다() {
         // given
         SpyZScoreEvaluator evaluator = new SpyZScoreEvaluator(evaluation(StrategySignal.HOLD));
         SpyPositionLoader positions = new SpyPositionLoader(new Position(SYMBOL, 0));
-        SpyOpenOrderChecker openOrders = new SpyOpenOrderChecker(false);
         SpyZScoreTradePlanSaver plans = new SpyZScoreTradePlanSaver();
 
         // when
-        ZScoreTradePlan plan = service(evaluator, positions, openOrders, plans).plan(command());
+        ZScoreTradePlan plan = service(evaluator, positions, plans).plan(command());
 
         // then
         assertAll(
                 () -> assertEquals(SYMBOL, plan.evaluation().symbol()),
                 () -> assertEquals(Optional.empty(), plan.proposal()),
                 () -> assertEquals(0, positions.loadCount()),
-                () -> assertEquals(0, openOrders.checkCount()),
                 () -> assertEquals(1, plans.saveCount())
         );
     }
 
     @Test
-    void 평가가_실패하면_상태를_조회하지_않고_같은_예외를_전달한다() {
+    void 평가가_실패하면_보유수량을_조회하지_않고_같은_예외를_전달한다() {
         // given
         ZScoreEvaluationException expected = new ZScoreEvaluationException(
                 ZScoreEvaluationException.Reason.SERVER_UNAVAILABLE,
@@ -141,13 +126,12 @@ class ZScoreTradePlanningServiceTest {
         SpyZScoreEvaluator evaluator = new SpyZScoreEvaluator(evaluation(StrategySignal.HOLD));
         evaluator.failWith(expected);
         SpyPositionLoader positions = new SpyPositionLoader(new Position(SYMBOL, 0));
-        SpyOpenOrderChecker openOrders = new SpyOpenOrderChecker(false);
         SpyZScoreTradePlanSaver plans = new SpyZScoreTradePlanSaver();
 
         // when
         ZScoreEvaluationException actual = assertThrows(
                 ZScoreEvaluationException.class,
-                () -> service(evaluator, positions, openOrders, plans).plan(command())
+                () -> service(evaluator, positions, plans).plan(command())
         );
 
         // then
@@ -155,7 +139,6 @@ class ZScoreTradePlanningServiceTest {
                 () -> assertSame(expected, actual),
                 () -> assertEquals(1, evaluator.evaluationCount()),
                 () -> assertEquals(0, positions.loadCount()),
-                () -> assertEquals(0, openOrders.checkCount()),
                 () -> assertEquals(0, plans.saveCount())
         );
     }
@@ -163,13 +146,11 @@ class ZScoreTradePlanningServiceTest {
     private static ZScoreTradePlanningService service(
             SpyZScoreEvaluator evaluator,
             SpyPositionLoader positions,
-            SpyOpenOrderChecker openOrders,
             SpyZScoreTradePlanSaver plans
     ) {
         return new ZScoreTradePlanningService(
                 evaluator,
                 positions,
-                openOrders,
                 new ZScoreTradeProposalPolicy(),
                 plans,
                 InstantSource.fixed(PLANNED_AT)
