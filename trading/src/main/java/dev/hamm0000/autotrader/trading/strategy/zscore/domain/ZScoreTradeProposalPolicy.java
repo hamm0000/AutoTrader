@@ -45,7 +45,7 @@ public final class ZScoreTradeProposalPolicy {
 
         return switch (signal) {
             case BUY -> proposeBuy(symbol, currentPrice, purchaseBudget, position);
-            case SELL -> proposeSell(symbol, position);
+            case SELL -> proposeSell(symbol, currentPrice, position);
             case HOLD -> Optional.empty();
         };
     }
@@ -74,10 +74,18 @@ public final class ZScoreTradeProposalPolicy {
         ));
     }
 
-    private static Optional<TradeProposal> proposeSell(String symbol, Position position) {
+    private static Optional<TradeProposal> proposeSell(
+            String symbol,
+            CurrentPrice currentPrice,
+            Position position
+    ) {
         if (position.quantity() == 0) {
             return Optional.empty();
         }
-        return Optional.of(new SellProposal(symbol, position.quantity()));
+        return Optional.of(new SellProposal(
+                symbol,
+                position.quantity(),
+                currentPrice.value()
+        ));
     }
 }

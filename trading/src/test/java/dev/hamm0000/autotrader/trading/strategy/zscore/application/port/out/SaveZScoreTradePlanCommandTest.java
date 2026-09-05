@@ -50,6 +50,28 @@ class SaveZScoreTradePlanCommandTest {
         ));
     }
 
+    @Test
+    void 평가에_사용한_현재가와_주문제안_가격이_다르면_저장할_수_없다() {
+        // given
+        ZScoreTradePlan plan = buyPlan(SYMBOL, PURCHASE_BUDGET);
+        ZScoreTradePlan mismatchedPricePlan = new ZScoreTradePlan(
+                plan.evaluation(),
+                Optional.of(new BuyProposal(
+                        SYMBOL,
+                        138,
+                        new BigDecimal("72000"),
+                        PURCHASE_BUDGET
+                ))
+        );
+
+        // when & then
+        assertThrows(IllegalArgumentException.class, () -> new SaveZScoreTradePlanCommand(
+                planningCommand(),
+                mismatchedPricePlan,
+                PLANNED_AT
+        ));
+    }
+
     private static ZScoreTradePlanningCommand planningCommand() {
         return new ZScoreTradePlanningCommand(
                 new ZScoreEvaluationCommand(

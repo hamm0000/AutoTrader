@@ -2,7 +2,6 @@ package dev.hamm0000.autotrader.adapter.postgres.strategy.zscore;
 
 import dev.hamm0000.autotrader.trading.order.domain.OrderSide;
 import dev.hamm0000.autotrader.trading.proposal.domain.BuyProposal;
-import dev.hamm0000.autotrader.trading.proposal.domain.SellProposal;
 import dev.hamm0000.autotrader.trading.proposal.domain.TradeProposal;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.EvaluatedZScore;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.ZScoreEvaluationCommand;
@@ -54,8 +53,7 @@ final class ZScoreTradePlanEntityMapper {
                     buy.currentPrice()
             );
         }
-        SellProposal sell = (SellProposal) proposal;
-        return new ProposalColumns(OrderSide.SELL, sell.quantity(), null);
+        return new ProposalColumns(OrderSide.SELL, proposal.quantity(), null);
     }
 
     private record ProposalColumns(

@@ -87,7 +87,7 @@ class ZScoreTradePlanningServiceTest {
                 () -> assertEquals(new PositionQuery(SYMBOL), positions.query()),
                 () -> assertEquals(evaluation(StrategySignal.SELL), plan.evaluation()),
                 () -> assertEquals(
-                        Optional.of(new SellProposal(SYMBOL, 7)),
+                        Optional.of(new SellProposal(SYMBOL, 7, CURRENT_PRICE.value())),
                         plan.proposal()
                 ),
                 () -> assertEquals(

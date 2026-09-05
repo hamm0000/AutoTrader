@@ -64,7 +64,10 @@ class ZScoreTradeProposalPolicyTest {
         Optional<TradeProposal> proposal = propose(StrategySignal.SELL, position(7));
 
         // then
-        assertEquals(Optional.of(new SellProposal(SYMBOL, 7)), proposal);
+        assertEquals(
+                Optional.of(new SellProposal(SYMBOL, 7, CURRENT_PRICE.value())),
+                proposal
+        );
     }
 
     @Test

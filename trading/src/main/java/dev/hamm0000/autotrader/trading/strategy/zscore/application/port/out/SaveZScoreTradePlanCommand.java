@@ -27,6 +27,11 @@ public record SaveZScoreTradePlanCommand(
                         "proposal symbol must match evaluation command symbol"
                 );
             }
+            if (proposal.referencePrice().compareTo(plan.evaluation().currentPrice().value()) != 0) {
+                throw new IllegalArgumentException(
+                        "proposal referencePrice must match evaluation currentPrice"
+                );
+            }
             if (proposal instanceof BuyProposal buy
                     && buy.purchaseBudget().compareTo(planningCommand.purchaseBudget()) != 0) {
                 throw new IllegalArgumentException(

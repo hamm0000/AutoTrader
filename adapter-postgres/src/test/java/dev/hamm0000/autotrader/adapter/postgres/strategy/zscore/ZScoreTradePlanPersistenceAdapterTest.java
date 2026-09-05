@@ -106,7 +106,7 @@ class ZScoreTradePlanPersistenceAdapterTest {
         // when
         saveZScoreTradePlan.save(command(
                 StrategySignal.SELL,
-                Optional.of(new SellProposal(SYMBOL, 7))
+                Optional.of(new SellProposal(SYMBOL, 7, CURRENT_PRICE))
         ));
 
         // then

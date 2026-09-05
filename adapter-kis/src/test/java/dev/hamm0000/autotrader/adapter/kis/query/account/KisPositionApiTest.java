@@ -111,11 +111,16 @@ class KisPositionApiTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-            """{"output1":[]}""",
-            """{"rt_cd":"0"}""",
-            """{"rt_cd":"0","output1":[{"hldg_qty":"7"}]}""",
-            """{"rt_cd":"0","output1":[{"pdno":"005930","hldg_qty":"invalid"}]}""",
-            """{"rt_cd":"0","output1":[{"pdno":"005930","hldg_qty":"-1"}]}"""
+            """
+            {"output1":[]}""",
+            """
+            {"rt_cd":"0"}""",
+            """
+            {"rt_cd":"0","output1":[{"hldg_qty":"7"}]}""",
+            """
+            {"rt_cd":"0","output1":[{"pdno":"005930","hldg_qty":"invalid"}]}""",
+            """
+            {"rt_cd":"0","output1":[{"pdno":"005930","hldg_qty":"-1"}]}"""
     })
     void 잔고_응답이_올바르지_않으면_INVALID_RESPONSE로_변환한다(String response) {
         // given

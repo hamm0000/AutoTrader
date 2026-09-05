@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
- * Z-score 계산에 사용한 현재가로 Budget 안에서 정수수량을 매수하는 Proposal입니다.
+ * Z-score 계산에 사용한 현재가는 기록만하고, Budget 안에서 시장가로 정수 부분의 수량을 매수하는 Proposal입니다.
  */
 public record BuyProposal(
         String symbol,
@@ -36,5 +36,10 @@ public record BuyProposal(
         if (symbol.isBlank()) {
             throw new IllegalArgumentException("symbol must not be blank");
         }
+    }
+
+    @Override
+    public BigDecimal referencePrice() {
+        return currentPrice;
     }
 }
