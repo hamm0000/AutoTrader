@@ -2,6 +2,7 @@ package dev.hamm0000.autotrader.adapter.postgres.marketcalendar;
 
 import dev.hamm0000.autotrader.adapter.postgres.marketcalendar.calendar.TradingCalendarPersistenceAdapter;
 import dev.hamm0000.autotrader.adapter.postgres.marketcalendar.specialsession.MarketSessionOverridePersistenceAdapter;
+import dev.hamm0000.autotrader.adapter.postgres.order.OrderPersistenceAdapter;
 import dev.hamm0000.autotrader.adapter.postgres.strategy.zscore.ZScoreTradePlanPersistenceAdapter;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -19,7 +20,8 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @Import({
         TradingCalendarPersistenceAdapter.class,
         MarketSessionOverridePersistenceAdapter.class,
-        ZScoreTradePlanPersistenceAdapter.class
+        ZScoreTradePlanPersistenceAdapter.class,
+        OrderPersistenceAdapter.class
 })
 public class PostgresAdapterTestApplication {
 

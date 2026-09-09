@@ -8,6 +8,7 @@ import java.util.Objects;
 
 public record Order(
         OrderId id,
+        OrderIdempotencyKey idempotencyKey,
         String symbol,
         OrderSide side,
         long quantity,
@@ -19,6 +20,7 @@ public record Order(
 
     public Order {
         Objects.requireNonNull(id, "id must not be null");
+        Objects.requireNonNull(idempotencyKey, "idempotencyKey must not be null");
         requireNotBlank(symbol, "symbol");
         Objects.requireNonNull(side, "side must not be null");
         Objects.requireNonNull(referencePrice, "referencePrice must not be null");
@@ -36,13 +38,19 @@ public record Order(
         }
     }
 
-    public static Order prepare(OrderId id, TradeProposal proposal, Instant preparedAt) {
+    public static Order prepare(
+            OrderId id,
+            OrderIdempotencyKey idempotencyKey,
+            TradeProposal proposal,
+            Instant preparedAt
+    ) {
         Objects.requireNonNull(proposal, "proposal must not be null");
         Objects.requireNonNull(preparedAt, "preparedAt must not be null");
 
         OrderSide side = proposal instanceof BuyProposal ? OrderSide.BUY : OrderSide.SELL;
         return new Order(
                 id,
+                idempotencyKey,
                 proposal.symbol(),
                 side,
                 proposal.quantity(),
@@ -88,6 +96,7 @@ public record Order(
         }
         return new Order(
                 id,
+                idempotencyKey,
                 symbol,
                 side,
                 quantity,

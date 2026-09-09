@@ -16,6 +16,9 @@ class OrderTest {
     private static final OrderId ORDER_ID = new OrderId(
             UUID.fromString("63df7894-b456-4bf7-85cd-706d9d32c7c9")
     );
+    private static final OrderIdempotencyKey IDEMPOTENCY_KEY = new OrderIdempotencyKey(
+            "zscore:005930:2026-09-02"
+    );
     private static final Instant PREPARED_AT = Instant.parse("2026-09-05T00:10:00Z");
     private static final Instant RESOLVED_AT = Instant.parse("2026-09-05T00:10:01Z");
 
@@ -24,6 +27,7 @@ class OrderTest {
         // when
         Order order = Order.prepare(
                 ORDER_ID,
+                IDEMPOTENCY_KEY,
                 new BuyProposal(
                         "005930",
                         138,
@@ -36,6 +40,7 @@ class OrderTest {
         // then
         assertAll(
                 () -> assertEquals(ORDER_ID, order.id()),
+                () -> assertEquals(IDEMPOTENCY_KEY, order.idempotencyKey()),
                 () -> assertEquals("005930", order.symbol()),
                 () -> assertEquals(OrderSide.BUY, order.side()),
                 () -> assertEquals(138, order.quantity()),
@@ -55,6 +60,7 @@ class OrderTest {
         // when
         Order order = Order.prepare(
                 ORDER_ID,
+                IDEMPOTENCY_KEY,
                 new SellProposal("005930", 7, new BigDecimal("72300")),
                 PREPARED_AT
         );
@@ -181,6 +187,7 @@ class OrderTest {
     private static Order pendingOrder() {
         return Order.prepare(
                 ORDER_ID,
+                IDEMPOTENCY_KEY,
                 new BuyProposal(
                         "005930",
                         138,
