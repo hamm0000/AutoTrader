@@ -9,7 +9,7 @@ import java.util.Objects;
  * <pre>
  * PendingSubmission
  * - KIS 주문 접수 성공 -> Submitted
- * - KIS의 주문 거절 -> Rejected
+ * - 주문 요청 전 제출 불가 또는 KIS의 명시적 주문 거절 -> Rejected
  * - 주문 응답 결과 확인 불가(timeout등) -> SubmissionUnknown
  *
  *  SubmissionUnknown(구현 예정)
