@@ -9,8 +9,11 @@ import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.Evalu
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.PlanZScoreTrade;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.ZScoreTradePlan;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.ZScoreTradePlanningCommand;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.FindZScoreTradePlan;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.SaveZScoreTradePlan;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.SaveZScoreTradePlanCommand;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreTradePlanQueryException;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreTradePlanSaveException;
 import dev.hamm0000.autotrader.trading.strategy.zscore.domain.StrategySignal;
 import dev.hamm0000.autotrader.trading.strategy.zscore.domain.ZScoreTradeProposalPolicy;
 import java.time.InstantSource;
@@ -22,6 +25,7 @@ public final class ZScoreTradePlanningService implements PlanZScoreTrade {
     private final EvaluateZScore evaluateZScore;
     private final LoadPosition loadPosition;
     private final ZScoreTradeProposalPolicy proposalPolicy;
+    private final FindZScoreTradePlan findZScoreTradePlan;
     private final SaveZScoreTradePlan saveZScoreTradePlan;
     private final InstantSource timeSource;
 
@@ -29,6 +33,7 @@ public final class ZScoreTradePlanningService implements PlanZScoreTrade {
             EvaluateZScore evaluateZScore,
             LoadPosition loadPosition,
             ZScoreTradeProposalPolicy proposalPolicy,
+            FindZScoreTradePlan findZScoreTradePlan,
             SaveZScoreTradePlan saveZScoreTradePlan,
             InstantSource timeSource
     ) {
@@ -37,6 +42,10 @@ public final class ZScoreTradePlanningService implements PlanZScoreTrade {
         this.proposalPolicy = Objects.requireNonNull(
                 proposalPolicy,
                 "proposalPolicy must not be null"
+        );
+        this.findZScoreTradePlan = Objects.requireNonNull(
+                findZScoreTradePlan,
+                "findZScoreTradePlan must not be null"
         );
         this.saveZScoreTradePlan = Objects.requireNonNull(
                 saveZScoreTradePlan,
@@ -49,6 +58,11 @@ public final class ZScoreTradePlanningService implements PlanZScoreTrade {
     public ZScoreTradePlan plan(ZScoreTradePlanningCommand command) {
         Objects.requireNonNull(command, "command must not be null");
 
+        Optional<ZScoreTradePlan> existing = findZScoreTradePlan.findByPlanningCommand(command);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
         EvaluatedZScore evaluation = evaluateZScore.evaluate(command.evaluationCommand());
         StrategySignal signal = evaluation.analytics().signal();
         ZScoreTradePlan plan;
@@ -57,12 +71,29 @@ public final class ZScoreTradePlanningService implements PlanZScoreTrade {
         } else {
             plan = planProposal(command, evaluation, signal);
         }
-        saveZScoreTradePlan.save(new SaveZScoreTradePlanCommand(
-                command,
-                plan,
-                timeSource.instant()
-        ));
+        try {
+            saveZScoreTradePlan.save(new SaveZScoreTradePlanCommand(
+                    command,
+                    plan,
+                    timeSource.instant()
+            ));
+        } catch (ZScoreTradePlanSaveException saveFailure) {
+            return recoverPlan(command, saveFailure);
+        }
         return plan;
+    }
+
+    private ZScoreTradePlan recoverPlan(
+            ZScoreTradePlanningCommand command,
+            ZScoreTradePlanSaveException saveFailure
+    ) {
+        try {
+            return findZScoreTradePlan.findByPlanningCommand(command)
+                    .orElseThrow(() -> saveFailure);
+        } catch (ZScoreTradePlanQueryException queryFailure) {
+            saveFailure.addSuppressed(queryFailure);
+            throw saveFailure;
+        }
     }
 
     private ZScoreTradePlan planProposal(

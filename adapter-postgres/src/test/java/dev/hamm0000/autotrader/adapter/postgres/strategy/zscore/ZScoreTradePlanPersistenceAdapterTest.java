@@ -2,6 +2,7 @@ package dev.hamm0000.autotrader.adapter.postgres.strategy.zscore;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -14,6 +15,7 @@ import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.Evalu
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.ZScoreEvaluationCommand;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.ZScoreTradePlan;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.ZScoreTradePlanningCommand;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.FindZScoreTradePlan;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.SaveZScoreTradePlan;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.SaveZScoreTradePlanCommand;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationResult;
@@ -44,6 +46,9 @@ class ZScoreTradePlanPersistenceAdapterTest {
 
     @Autowired
     private SaveZScoreTradePlan saveZScoreTradePlan;
+
+    @Autowired
+    private FindZScoreTradePlan findZScoreTradePlan;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -138,6 +143,115 @@ class ZScoreTradePlanPersistenceAdapterTest {
         );
     }
 
+    @Test
+    void 저장한_매수_계획을_같은_요청으로_조회하면_계획을_복원한다() {
+        // given
+        SaveZScoreTradePlanCommand command = command(
+                StrategySignal.BUY,
+                Optional.of(new BuyProposal(SYMBOL, 138, CURRENT_PRICE, PURCHASE_BUDGET))
+        );
+        saveZScoreTradePlan.save(command);
+
+        // when
+        ZScoreTradePlan result = findZScoreTradePlan
+                .findByPlanningCommand(command.planningCommand())
+                .orElseThrow();
+
+        // then
+        assertPlanEquivalent(command.plan(), result);
+    }
+
+    @Test
+    void 저장한_매도_계획을_조회하면_평가_현재가로_제안을_복원한다() {
+        // given
+        SaveZScoreTradePlanCommand command = command(
+                StrategySignal.SELL,
+                Optional.of(new SellProposal(SYMBOL, 7, CURRENT_PRICE))
+        );
+        saveZScoreTradePlan.save(command);
+
+        // when
+        ZScoreTradePlan result = findZScoreTradePlan
+                .findByPlanningCommand(command.planningCommand())
+                .orElseThrow();
+
+        // then
+        assertPlanEquivalent(command.plan(), result);
+    }
+
+    @Test
+    void 저장한_관망_계획을_조회하면_제안이_없는_계획을_복원한다() {
+        // given
+        SaveZScoreTradePlanCommand command = command(
+                StrategySignal.HOLD,
+                Optional.empty()
+        );
+        saveZScoreTradePlan.save(command);
+
+        // when
+        ZScoreTradePlan result = findZScoreTradePlan
+                .findByPlanningCommand(command.planningCommand())
+                .orElseThrow();
+
+        // then
+        assertPlanEquivalent(command.plan(), result);
+    }
+
+    @Test
+    void 같은_종목과_평가종료일이라도_계획_조건이_다르면_조회하지_않는다() {
+        // given
+        SaveZScoreTradePlanCommand command = command(
+                StrategySignal.HOLD,
+                Optional.empty()
+        );
+        saveZScoreTradePlan.save(command);
+        ZScoreTradePlanningCommand differentCommand = new ZScoreTradePlanningCommand(
+                new ZScoreEvaluationCommand(SYMBOL, 20, END_DATE_EXCLUSIVE),
+                PURCHASE_BUDGET
+        );
+
+        // when
+        Optional<ZScoreTradePlan> result = findZScoreTradePlan.findByPlanningCommand(
+                differentCommand
+        );
+
+        // then
+        assertEquals(Optional.empty(), result);
+    }
+
+    @Test
+    void 같은_종목과_평가종료일이라도_예산이_다르면_조회하지_않는다() {
+        // given
+        SaveZScoreTradePlanCommand command = command(
+                StrategySignal.HOLD,
+                Optional.empty()
+        );
+        saveZScoreTradePlan.save(command);
+        ZScoreTradePlanningCommand differentCommand = new ZScoreTradePlanningCommand(
+                command.planningCommand().evaluationCommand(),
+                new BigDecimal("20000000")
+        );
+
+        // when
+        Optional<ZScoreTradePlan> result = findZScoreTradePlan.findByPlanningCommand(
+                differentCommand
+        );
+
+        // then
+        assertEquals(Optional.empty(), result);
+    }
+
+    @Test
+    void 저장되지_않은_계획_요청은_조회되지_않는다() {
+        // when
+        Optional<ZScoreTradePlan> result = findZScoreTradePlan.findByPlanningCommand(
+                command(StrategySignal.HOLD, Optional.empty()).planningCommand()
+        );
+
+        // then
+        assertEquals(Optional.empty(), result);
+    }
+
     private StoredPlan storedPlan() {
         return jdbcTemplate.queryForObject(
                 "SELECT symbol, end_date_exclusive, lookback_window, planned_at, current_price, "
@@ -161,6 +275,47 @@ class ZScoreTradePlanPersistenceAdapterTest {
                         resultSet.getBigDecimal("purchase_budget")
                 )
         );
+    }
+
+    private static void assertPlanEquivalent(
+            ZScoreTradePlan expected,
+            ZScoreTradePlan actual
+    ) {
+        assertAll(
+                () -> assertEquals(expected.evaluation().symbol(), actual.evaluation().symbol()),
+                () -> assertEquals(
+                        0,
+                        expected.evaluation().currentPrice().value().compareTo(
+                                actual.evaluation().currentPrice().value()
+                        )
+                ),
+                () -> assertEquals(
+                        expected.evaluation().analytics(),
+                        actual.evaluation().analytics()
+                ),
+                () -> assertEquals(expected.proposal().isPresent(), actual.proposal().isPresent())
+        );
+        if (expected.proposal().isEmpty()) {
+            return;
+        }
+
+        TradeProposal expectedProposal = expected.proposal().orElseThrow();
+        TradeProposal actualProposal = actual.proposal().orElseThrow();
+        assertAll(
+                () -> assertEquals(expectedProposal.getClass(), actualProposal.getClass()),
+                () -> assertEquals(expectedProposal.symbol(), actualProposal.symbol()),
+                () -> assertEquals(expectedProposal.quantity(), actualProposal.quantity()),
+                () -> assertEquals(
+                        0,
+                        expectedProposal.referencePrice().compareTo(
+                                actualProposal.referencePrice()
+                        )
+                )
+        );
+        if (expectedProposal instanceof BuyProposal expectedBuy) {
+            BuyProposal actualBuy = assertInstanceOf(BuyProposal.class, actualProposal);
+            assertEquals(0, expectedBuy.purchaseBudget().compareTo(actualBuy.purchaseBudget()));
+        }
     }
 
     private static SaveZScoreTradePlanCommand command(

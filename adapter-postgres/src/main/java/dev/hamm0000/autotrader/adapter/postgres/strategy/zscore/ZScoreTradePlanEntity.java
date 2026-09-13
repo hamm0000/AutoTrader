@@ -108,4 +108,48 @@ public class ZScoreTradePlanEntity {
         this.proposedPrice = proposedPrice;
         this.purchaseBudget = purchaseBudget;
     }
+
+    String symbol() {
+        return symbol;
+    }
+
+    BigDecimal currentPrice() {
+        return currentPrice;
+    }
+
+    double zScore() {
+        return zScore;
+    }
+
+    double rollingMean() {
+        return rollingMean;
+    }
+
+    double rollingStddev() {
+        return rollingStddev;
+    }
+
+    StrategySignal signal() {
+        return signal;
+    }
+
+    String reason() {
+        return reason;
+    }
+
+    OrderSide proposalSide() {
+        return proposalSide;
+    }
+
+    Long proposedQuantity() {
+        return proposedQuantity;
+    }
+
+    BigDecimal proposedPrice() {
+        return proposedPrice;
+    }
+
+    BigDecimal purchaseBudget() {
+        return purchaseBudget;
+    }
 }

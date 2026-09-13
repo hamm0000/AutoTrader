@@ -17,8 +17,10 @@ import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.ZScor
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.SaveZScoreTradePlanCommand;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationException;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationResult;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreTradePlanQueryException;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreTradePlanSaveException;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.service.testdouble.FakeZScoreTradePlanStore;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.service.testdouble.SpyPositionLoader;
-import dev.hamm0000.autotrader.trading.strategy.zscore.application.service.testdouble.SpyZScoreTradePlanSaver;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.service.testdouble.SpyZScoreEvaluator;
 import dev.hamm0000.autotrader.trading.strategy.zscore.domain.StrategySignal;
 import dev.hamm0000.autotrader.trading.strategy.zscore.domain.ZScoreTradeProposalPolicy;
@@ -43,7 +45,7 @@ class ZScoreTradePlanningServiceTest {
         // given
         SpyZScoreEvaluator evaluator = new SpyZScoreEvaluator(evaluation(StrategySignal.BUY));
         SpyPositionLoader positions = new SpyPositionLoader(new Position(SYMBOL, 0));
-        SpyZScoreTradePlanSaver plans = new SpyZScoreTradePlanSaver();
+        FakeZScoreTradePlanStore plans = new FakeZScoreTradePlanStore();
         ZScoreTradePlanningService service = service(evaluator, positions, plans);
 
         // when
@@ -75,7 +77,7 @@ class ZScoreTradePlanningServiceTest {
         // given
         SpyZScoreEvaluator evaluator = new SpyZScoreEvaluator(evaluation(StrategySignal.SELL));
         SpyPositionLoader positions = new SpyPositionLoader(new Position(SYMBOL, 7));
-        SpyZScoreTradePlanSaver plans = new SpyZScoreTradePlanSaver();
+        FakeZScoreTradePlanStore plans = new FakeZScoreTradePlanStore();
         ZScoreTradePlanningService service = service(evaluator, positions, plans);
 
         // when
@@ -102,7 +104,7 @@ class ZScoreTradePlanningServiceTest {
         // given
         SpyZScoreEvaluator evaluator = new SpyZScoreEvaluator(evaluation(StrategySignal.HOLD));
         SpyPositionLoader positions = new SpyPositionLoader(new Position(SYMBOL, 0));
-        SpyZScoreTradePlanSaver plans = new SpyZScoreTradePlanSaver();
+        FakeZScoreTradePlanStore plans = new FakeZScoreTradePlanStore();
 
         // when
         ZScoreTradePlan plan = service(evaluator, positions, plans).plan(command());
@@ -117,6 +119,154 @@ class ZScoreTradePlanningServiceTest {
     }
 
     @Test
+    void 같은_요청으로_저장된_계획이_있으면_다시_평가하거나_저장하지_않는다() {
+        // given
+        ZScoreTradePlan existing = new ZScoreTradePlan(
+                evaluation(StrategySignal.BUY),
+                Optional.of(new BuyProposal(
+                        SYMBOL,
+                        138,
+                        CURRENT_PRICE.value(),
+                        PURCHASE_BUDGET
+                ))
+        );
+        FakeZScoreTradePlanStore plans = new FakeZScoreTradePlanStore();
+        plans.put(command(), existing);
+        SpyZScoreEvaluator evaluator = new SpyZScoreEvaluator(evaluation(StrategySignal.HOLD));
+        SpyPositionLoader positions = new SpyPositionLoader(new Position(SYMBOL, 0));
+
+        // when
+        ZScoreTradePlan result = service(evaluator, positions, plans).plan(command());
+
+        // then
+        assertAll(
+                () -> assertSame(existing, result),
+                () -> assertEquals(1, plans.findCount()),
+                () -> assertEquals(0, plans.saveCount()),
+                () -> assertEquals(0, evaluator.evaluationCount()),
+                () -> assertEquals(0, positions.loadCount())
+        );
+    }
+
+    @Test
+    void 동시_요청이_계획을_먼저_저장하면_저장_실패_후_그_계획을_반환한다() {
+        // given
+        ZScoreTradePlan concurrent = new ZScoreTradePlan(
+                evaluation(StrategySignal.BUY),
+                Optional.of(new BuyProposal(
+                        SYMBOL,
+                        138,
+                        CURRENT_PRICE.value(),
+                        PURCHASE_BUDGET
+                ))
+        );
+        ZScoreTradePlanSaveException saveFailure = new ZScoreTradePlanSaveException(
+                "중복 계획",
+                new RuntimeException("duplicate")
+        );
+        FakeZScoreTradePlanStore plans = new FakeZScoreTradePlanStore();
+        plans.failSaveAfterConcurrentPlan(saveFailure, command(), concurrent);
+        SpyZScoreEvaluator evaluator = new SpyZScoreEvaluator(evaluation(StrategySignal.BUY));
+        SpyPositionLoader positions = new SpyPositionLoader(new Position(SYMBOL, 0));
+
+        // when
+        ZScoreTradePlan result = service(evaluator, positions, plans).plan(command());
+
+        // then
+        assertAll(
+                () -> assertSame(concurrent, result),
+                () -> assertEquals(2, plans.findCount()),
+                () -> assertEquals(1, plans.saveCount()),
+                () -> assertEquals(1, evaluator.evaluationCount()),
+                () -> assertEquals(1, positions.loadCount())
+        );
+    }
+
+    @Test
+    void 저장에_실패하고_같은_요청의_계획도_없으면_원래_예외를_전달한다() {
+        // given
+        ZScoreTradePlanSaveException expected = new ZScoreTradePlanSaveException(
+                "저장 실패",
+                new RuntimeException("database unavailable")
+        );
+        FakeZScoreTradePlanStore plans = new FakeZScoreTradePlanStore();
+        plans.failSaveWith(expected);
+        SpyZScoreEvaluator evaluator = new SpyZScoreEvaluator(evaluation(StrategySignal.HOLD));
+        SpyPositionLoader positions = new SpyPositionLoader(new Position(SYMBOL, 0));
+
+        // when
+        ZScoreTradePlanSaveException actual = assertThrows(
+                ZScoreTradePlanSaveException.class,
+                () -> service(evaluator, positions, plans).plan(command())
+        );
+
+        // then
+        assertAll(
+                () -> assertSame(expected, actual),
+                () -> assertEquals(2, plans.findCount()),
+                () -> assertEquals(1, plans.saveCount())
+        );
+    }
+
+    @Test
+    void 저장_실패_후_계획_재조회도_실패하면_저장_예외에_조회_예외를_보존한다() {
+        // given
+        ZScoreTradePlanSaveException saveFailure = new ZScoreTradePlanSaveException(
+                "저장 실패",
+                new RuntimeException("database unavailable")
+        );
+        ZScoreTradePlanQueryException queryFailure = new ZScoreTradePlanQueryException(
+                "재조회 실패",
+                new RuntimeException("database unavailable")
+        );
+        FakeZScoreTradePlanStore plans = new FakeZScoreTradePlanStore();
+        plans.failSaveWith(saveFailure);
+        plans.failFindOnAttempt(2, queryFailure);
+        SpyZScoreEvaluator evaluator = new SpyZScoreEvaluator(evaluation(StrategySignal.HOLD));
+        SpyPositionLoader positions = new SpyPositionLoader(new Position(SYMBOL, 0));
+
+        // when
+        ZScoreTradePlanSaveException actual = assertThrows(
+                ZScoreTradePlanSaveException.class,
+                () -> service(evaluator, positions, plans).plan(command())
+        );
+
+        // then
+        assertAll(
+                () -> assertSame(saveFailure, actual),
+                () -> assertEquals(1, actual.getSuppressed().length),
+                () -> assertSame(queryFailure, actual.getSuppressed()[0])
+        );
+    }
+
+    @Test
+    void 최초_계획_조회가_실패하면_평가하거나_저장하지_않는다() {
+        // given
+        ZScoreTradePlanQueryException expected = new ZScoreTradePlanQueryException(
+                "조회 실패",
+                new RuntimeException("database unavailable")
+        );
+        FakeZScoreTradePlanStore plans = new FakeZScoreTradePlanStore();
+        plans.failFindOnAttempt(1, expected);
+        SpyZScoreEvaluator evaluator = new SpyZScoreEvaluator(evaluation(StrategySignal.HOLD));
+        SpyPositionLoader positions = new SpyPositionLoader(new Position(SYMBOL, 0));
+
+        // when
+        ZScoreTradePlanQueryException actual = assertThrows(
+                ZScoreTradePlanQueryException.class,
+                () -> service(evaluator, positions, plans).plan(command())
+        );
+
+        // then
+        assertAll(
+                () -> assertSame(expected, actual),
+                () -> assertEquals(0, evaluator.evaluationCount()),
+                () -> assertEquals(0, positions.loadCount()),
+                () -> assertEquals(0, plans.saveCount())
+        );
+    }
+
+    @Test
     void 평가가_실패하면_보유수량을_조회하지_않고_같은_예외를_전달한다() {
         // given
         ZScoreEvaluationException expected = new ZScoreEvaluationException(
@@ -126,7 +276,7 @@ class ZScoreTradePlanningServiceTest {
         SpyZScoreEvaluator evaluator = new SpyZScoreEvaluator(evaluation(StrategySignal.HOLD));
         evaluator.failWith(expected);
         SpyPositionLoader positions = new SpyPositionLoader(new Position(SYMBOL, 0));
-        SpyZScoreTradePlanSaver plans = new SpyZScoreTradePlanSaver();
+        FakeZScoreTradePlanStore plans = new FakeZScoreTradePlanStore();
 
         // when
         ZScoreEvaluationException actual = assertThrows(
@@ -146,12 +296,13 @@ class ZScoreTradePlanningServiceTest {
     private static ZScoreTradePlanningService service(
             SpyZScoreEvaluator evaluator,
             SpyPositionLoader positions,
-            SpyZScoreTradePlanSaver plans
+            FakeZScoreTradePlanStore plans
     ) {
         return new ZScoreTradePlanningService(
                 evaluator,
                 positions,
                 new ZScoreTradeProposalPolicy(),
+                plans,
                 plans,
                 InstantSource.fixed(PLANNED_AT)
         );
