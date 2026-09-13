@@ -16,6 +16,7 @@ dependencies {
     implementation("tools.jackson.core:jackson-databind:3.1.4")
 
     testImplementation("org.springframework:spring-test")
+    testImplementation("org.skyscreamer:jsonassert:1.5.3")
     testImplementation("org.hamcrest:hamcrest:2.2")
     testImplementation("org.assertj:assertj-core:3.27.7")
     testImplementation(platform("org.junit:junit-bom:6.0.0"))

@@ -9,6 +9,9 @@ autotrader:
       app-key: ${KIS_PAPER_APP_KEY:}
       app-secret: ${KIS_PAPER_APP_SECRET:}
       request-timeout: 5s
+      access-token-cache:
+        enabled: ${KIS_PAPER_ACCESS_TOKEN_CACHE_ENABLED:false}
+        path: ${KIS_PAPER_ACCESS_TOKEN_CACHE_PATH:${user.home}/.autotrader/kis/paper-access-token.json}
   strategy:
     zscore:
       base-url: ${ZSCORE_SERVER_BASE_URL:}
@@ -21,7 +24,7 @@ autotrader:
 spring:
   config:
     activate:
-      on-profile: "!market-calendar-refresh"
+      on-profile: "!market-calendar-refresh & !paper-trading"
   autoconfigure:
     exclude:
       - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration

@@ -3,6 +3,7 @@ package dev.hamm0000.autotrader.adapter.kis.auth;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
+import java.util.Objects;
 
 public final class KisAccessTokenProvider {
 
@@ -10,15 +11,26 @@ public final class KisAccessTokenProvider {
 
     private final AccessTokenIssuer issuer;
     private final InstantSource timeSource;
+    private final AccessTokenStore tokenStore;
     // 외부 협력 객체라기 보다는 provider 전용 내부 상태이기 때문에 직접 new
     private final TokenIssueRetryState retryState = new TokenIssueRetryState();
     private final Object lock = new Object();
 
     private AccessToken cached;
+    private boolean cacheLoaded;
 
     public KisAccessTokenProvider(AccessTokenIssuer issuer, InstantSource timeSource) {
-        this.issuer = issuer;
-        this.timeSource = timeSource;
+        this(issuer, timeSource, AccessTokenStore.none());
+    }
+
+    public KisAccessTokenProvider(
+            AccessTokenIssuer issuer,
+            InstantSource timeSource,
+            AccessTokenStore tokenStore
+    ) {
+        this.issuer = Objects.requireNonNull(issuer, "issuer must not be null");
+        this.timeSource = Objects.requireNonNull(timeSource, "timeSource must not be null");
+        this.tokenStore = Objects.requireNonNull(tokenStore, "tokenStore must not be null");
     }
 
     /**
@@ -35,6 +47,7 @@ public final class KisAccessTokenProvider {
     public AccessToken getAccessToken() {
         synchronized (lock) {
             Instant now = timeSource.instant();
+            loadCacheOnce();
 
             // 만료 임박 전까지는 기존 토큰을 재사용
             if (cached != null && cached.isUsableAt(now, REFRESH_MARGIN)) {
@@ -47,6 +60,7 @@ public final class KisAccessTokenProvider {
             try {
                 cached = issuer.issue();
                 retryState.recordSuccess();
+                tokenStore.save(cached);
                 return cached;
             } catch (KisAuthException failure) {
                 Instant failedAt = timeSource.instant();
@@ -54,6 +68,14 @@ public final class KisAccessTokenProvider {
                 return fallbackOrThrow(failedAt, failure);
             }
         }
+    }
+
+    private void loadCacheOnce() {
+        if (cacheLoaded) {
+            return;
+        }
+        cached = tokenStore.find().orElse(null);
+        cacheLoaded = true;
     }
 
     // 아직 만료되지 않은 캐시 토큰이 있으면 반환하고, 없으면 현재 실패 상태를 전파

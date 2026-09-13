@@ -8,12 +8,12 @@ import dev.hamm0000.autotrader.trading.marketdata.domain.CurrentPrice;
 import dev.hamm0000.autotrader.trading.marketdata.domain.DailyClosingPrice;
 import dev.hamm0000.autotrader.trading.marketdata.domain.RecentClosingPrices;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.EvaluateZScore;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.EvaluatedZScore;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.ZScoreEvaluationCommand;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.EvaluateZScoreStrategy;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationRequest;
 import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationResult;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
@@ -43,7 +43,7 @@ public final class ZScoreEvaluationService implements EvaluateZScore {
     }
 
     @Override
-    public ZScoreEvaluationResult evaluate(ZScoreEvaluationCommand command) {
+    public EvaluatedZScore evaluate(ZScoreEvaluationCommand command) {
         Objects.requireNonNull(command, "command must not be null");
 
         RecentClosingPrices closingPrices = loadRecentClosingPrices.load(
@@ -55,12 +55,13 @@ public final class ZScoreEvaluationService implements EvaluateZScore {
         );
         CurrentPrice currentPrice = loadCurrentPrice.load(new CurrentPriceQuery(command.symbol()));
 
-        return evaluateZScoreStrategy.evaluate(new ZScoreEvaluationRequest(
+        ZScoreEvaluationResult analytics = evaluateZScoreStrategy.evaluate(new ZScoreEvaluationRequest(
                 command.symbol(),
                 command.window(),
                 toDoublePrices(closingPrices.values()),
                 currentPrice.value().doubleValue()
         ));
+        return new EvaluatedZScore(command.symbol(), currentPrice, analytics);
     }
 
     private static List<Double> toDoublePrices(List<DailyClosingPrice> closingPrices) {

@@ -21,6 +21,10 @@ public record TradingSessionDecision(Outcome outcome, Reason reason) {
         return new TradingSessionDecision(Outcome.STOP_CLOSED, Reason.CONFIRMED_CLOSED);
     }
 
+    public static TradingSessionDecision stopOutsideSession() {
+        return new TradingSessionDecision(Outcome.STOP_OUTSIDE_SESSION, Reason.OUTSIDE_SESSION);
+    }
+
     public static TradingSessionDecision startDegraded(Reason reason) {
         return new TradingSessionDecision(Outcome.START_DEGRADED, reason);
     }
@@ -28,12 +32,14 @@ public record TradingSessionDecision(Outcome outcome, Reason reason) {
     public enum Outcome {
         START,
         STOP_CLOSED,
+        STOP_OUTSIDE_SESSION,
         START_DEGRADED;
 
         private boolean accepts(Reason reason) {
             return switch (this) {
                 case START -> reason == Reason.CONFIRMED_OPEN;
                 case STOP_CLOSED -> reason == Reason.CONFIRMED_CLOSED;
+                case STOP_OUTSIDE_SESSION -> reason == Reason.OUTSIDE_SESSION;
                 case START_DEGRADED -> reason == Reason.CALENDAR_MISSING
                         || reason == Reason.CALENDAR_STALE
                         || reason == Reason.CALENDAR_UNAVAILABLE;
@@ -44,6 +50,7 @@ public record TradingSessionDecision(Outcome outcome, Reason reason) {
     public enum Reason {
         CONFIRMED_OPEN,
         CONFIRMED_CLOSED,
+        OUTSIDE_SESSION,
         CALENDAR_MISSING,
         CALENDAR_STALE,
         CALENDAR_UNAVAILABLE

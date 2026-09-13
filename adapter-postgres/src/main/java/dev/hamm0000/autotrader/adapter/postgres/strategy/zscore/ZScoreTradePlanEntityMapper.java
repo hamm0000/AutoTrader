@@ -1,0 +1,104 @@
+package dev.hamm0000.autotrader.adapter.postgres.strategy.zscore;
+
+import dev.hamm0000.autotrader.trading.marketdata.domain.CurrentPrice;
+import dev.hamm0000.autotrader.trading.order.domain.OrderSide;
+import dev.hamm0000.autotrader.trading.proposal.domain.BuyProposal;
+import dev.hamm0000.autotrader.trading.proposal.domain.SellProposal;
+import dev.hamm0000.autotrader.trading.proposal.domain.TradeProposal;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.EvaluatedZScore;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.ZScoreEvaluationCommand;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.in.ZScoreTradePlan;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.SaveZScoreTradePlanCommand;
+import dev.hamm0000.autotrader.trading.strategy.zscore.application.port.out.ZScoreEvaluationResult;
+import java.math.BigDecimal;
+import java.util.Optional;
+import java.util.UUID;
+
+final class ZScoreTradePlanEntityMapper {
+
+    private ZScoreTradePlanEntityMapper() {
+    }
+
+    static ZScoreTradePlanEntity toEntity(SaveZScoreTradePlanCommand command) {
+        ZScoreEvaluationCommand evaluationCommand = command
+                .planningCommand()
+                .evaluationCommand();
+        EvaluatedZScore evaluation = command.plan().evaluation();
+        ZScoreEvaluationResult analytics = evaluation.analytics();
+        ProposalColumns proposal = proposalColumns(command.plan().proposal().orElse(null));
+
+        return new ZScoreTradePlanEntity(
+                UUID.randomUUID(),
+                evaluation.symbol(),
+                evaluationCommand.endDateExclusive(),
+                evaluationCommand.window(),
+                command.plannedAt(),
+                evaluation.currentPrice().value(),
+                analytics.zScore(),
+                analytics.rollingMean(),
+                analytics.rollingStddev(),
+                analytics.signal(),
+                analytics.reason(),
+                proposal.side(),
+                proposal.quantity(),
+                proposal.price(),
+                command.planningCommand().purchaseBudget()
+        );
+    }
+
+    static ZScoreTradePlan toDomain(ZScoreTradePlanEntity entity) {
+        EvaluatedZScore evaluation = new EvaluatedZScore(
+                entity.symbol(),
+                new CurrentPrice(entity.currentPrice()),
+                new ZScoreEvaluationResult(
+                        entity.signal(),
+                        entity.zScore(),
+                        entity.rollingMean(),
+                        entity.rollingStddev(),
+                        entity.reason()
+                )
+        );
+        return new ZScoreTradePlan(evaluation, proposal(entity));
+    }
+
+    private static ProposalColumns proposalColumns(TradeProposal proposal) {
+        if (proposal == null) {
+            return new ProposalColumns(null, null, null);
+        }
+        if (proposal instanceof BuyProposal buy) {
+            return new ProposalColumns(
+                    OrderSide.BUY,
+                    buy.quantity(),
+                    buy.currentPrice()
+            );
+        }
+        return new ProposalColumns(OrderSide.SELL, proposal.quantity(), null);
+    }
+
+    private static Optional<TradeProposal> proposal(ZScoreTradePlanEntity entity) {
+        if (entity.proposalSide() == null) {
+            return Optional.empty();
+        }
+        TradeProposal proposal = switch (entity.proposalSide()) {
+            case BUY -> new BuyProposal(
+                    entity.symbol(),
+                    entity.proposedQuantity(),
+                    entity.proposedPrice(),
+                    entity.purchaseBudget()
+            );
+            case SELL -> new SellProposal(
+                    entity.symbol(),
+                    entity.proposedQuantity(),
+                    entity.currentPrice()
+            );
+        };
+        return Optional.of(proposal);
+    }
+
+    private record ProposalColumns(
+            OrderSide side,
+            Long quantity,
+            BigDecimal price
+    ) {
+    }
+}

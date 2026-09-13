@@ -1,0 +1,43 @@
+spring:
+  datasource:
+    url: ${AUTOTRADER_DB_URL:}
+    username: ${AUTOTRADER_DB_USERNAME:}
+    password: ${AUTOTRADER_DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  main:
+    web-application-type: none
+
+autotrader:
+  market-calendar:
+    session:
+      maximum-age: ${MARKET_CALENDAR_MAXIMUM_AGE:10d}
+  kis:
+    paper:
+      account:
+        account-number: ${KIS_PAPER_ACCOUNT_NUMBER:}
+        account-product-code: ${KIS_PAPER_ACCOUNT_PRODUCT_CODE:}
+  strategy:
+    zscore:
+      job:
+        lookback-window: ${ZSCORE_LOOKBACK_WINDOW:9}
+        purchase-budget: ${ZSCORE_PURCHASE_BUDGET:10000000}
+        targets:
+          - symbol: "005930"
+            company-name: "삼성전자"
+            sector: "반도체"
+          - symbol: "105560"
+            company-name: "KB금융"
+            sector: "은행"
+          - symbol: "055550"
+            company-name: "신한지주"
+            sector: "은행"
+          - symbol: "017670"
+            company-name: "SK텔레콤"
+            sector: "통신"
+          - symbol: "030200"
+            company-name: "KT"
+            sector: "통신"
