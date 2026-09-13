@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: ${AUTOTRADER_DB_URL:}
+    username: ${AUTOTRADER_DB_USERNAME:}
+    password: ${AUTOTRADER_DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+autotrader:
+  kis:
+    paper:
+      account:
+        account-number: ${KIS_PAPER_ACCOUNT_NUMBER:}
+        account-product-code: ${KIS_PAPER_ACCOUNT_PRODUCT_CODE:}

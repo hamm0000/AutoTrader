@@ -21,7 +21,7 @@ autotrader:
 spring:
   config:
     activate:
-      on-profile: "!market-calendar-refresh"
+      on-profile: "!market-calendar-refresh & !paper-trading"
   autoconfigure:
     exclude:
       - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
