@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,7 @@ import org.junit.jupiter.api.Test;
 class TradingSessionServiceTest {
 
     private static final LocalDate MARKET_DATE = LocalDate.of(2026, 8, 17);
-    private static final Instant NOW = Instant.parse("2026-08-17T08:25:00Z");
+    private static final Instant NOW = Instant.parse("2026-08-17T03:00:00Z");
     private static final TradingCalendar CALENDAR = new TradingCalendar(
             new CalendarPeriod(MARKET_DATE, MARKET_DATE),
             List.of(TradingDay.open(
@@ -95,7 +96,7 @@ class TradingSessionServiceTest {
     private static TradingSessionService service(StubTradingCalendarFinder finder) {
         return new TradingSessionService(
                 finder,
-                new TradingSessionPolicy(Duration.ofDays(7)),
+                new TradingSessionPolicy(Duration.ofDays(7), ZoneId.of("Asia/Seoul")),
                 InstantSource.fixed(NOW)
         );
     }
