@@ -1,5 +1,7 @@
 package dev.hamm0000.autotrader.app.live.kis.auth;
 
+import dev.hamm0000.autotrader.adapter.kis.auth.AccessTokenStore;
+import dev.hamm0000.autotrader.adapter.kis.auth.FileAccessTokenStore;
 import dev.hamm0000.autotrader.adapter.kis.auth.KisAccessTokenApi;
 import dev.hamm0000.autotrader.adapter.kis.auth.KisAccessTokenProvider;
 import dev.hamm0000.autotrader.app.live.kis.KisPaperProperties;
@@ -53,15 +55,18 @@ class KisPaperAuthConfiguration {
     @Bean
     KisAccessTokenProvider kisPaperAccessTokenProvider(
             @Qualifier("kisPaperAccessTokenApi") KisAccessTokenApi accessTokenApi,
-            InstantSource instantSource
+            InstantSource instantSource,
+            @Qualifier("kisPaperAccessTokenStore") AccessTokenStore tokenStore
     ) {
-        return new KisAccessTokenProvider(accessTokenApi, instantSource);
+        return new KisAccessTokenProvider(accessTokenApi, instantSource, tokenStore);
     }
 
     @Bean
-    KisAccessTokenRequestRunner kisAccessTokenRequestRunner(
-            @Qualifier("kisPaperAccessTokenProvider") KisAccessTokenProvider provider
-    ) {
-        return new KisAccessTokenRequestRunner(provider);
+    AccessTokenStore kisPaperAccessTokenStore(KisPaperAccessTokenCacheProperties properties) {
+        properties.validate();
+        if (!properties.enabled()) {
+            return AccessTokenStore.none();
+        }
+        return new FileAccessTokenStore(properties.path());
     }
 }

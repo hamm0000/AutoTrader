@@ -8,6 +8,7 @@ import dev.hamm0000.autotrader.adapter.kis.auth.testdouble.FakeIssuer;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 
@@ -29,6 +30,58 @@ public class KisAccessTokenProviderTest {
         // then
         assertThat(token).isSameAs(issuedToken);
         assertThat(issuer.issueCount()).isEqualTo(1);
+    }
+
+    @Test
+    void 저장된_토큰을_사용할_수_있으면_발급을_요청하지_않는다() {
+        // given
+        AccessToken storedToken = new AccessToken(
+                "stored-value",
+                NOW.plus(Duration.ofHours(24))
+        );
+        FakeIssuer issuer = new FakeIssuer();
+        FakeAccessTokenStore store = new FakeAccessTokenStore(storedToken);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(
+                issuer,
+                InstantSource.fixed(NOW),
+                store
+        );
+
+        // when
+        AccessToken token = provider.getAccessToken();
+
+        // then
+        assertThat(token).isSameAs(storedToken);
+        assertThat(issuer.issueCount()).isZero();
+        assertThat(store.findCount()).isEqualTo(1);
+    }
+
+    @Test
+    void 저장된_토큰이_만료_임박했으면_새_토큰을_발급하고_저장한다() {
+        // given
+        AccessToken storedToken = new AccessToken(
+                "stored-value",
+                NOW.plus(Duration.ofMinutes(29))
+        );
+        AccessToken issuedToken = new AccessToken(
+                "issued-value",
+                NOW.plus(Duration.ofHours(24))
+        );
+        FakeIssuer issuer = new FakeIssuer(issuedToken);
+        FakeAccessTokenStore store = new FakeAccessTokenStore(storedToken);
+        KisAccessTokenProvider provider = new KisAccessTokenProvider(
+                issuer,
+                InstantSource.fixed(NOW),
+                store
+        );
+
+        // when
+        AccessToken token = provider.getAccessToken();
+
+        // then
+        assertThat(token).isSameAs(issuedToken);
+        assertThat(issuer.issueCount()).isEqualTo(1);
+        assertThat(store.saved()).contains(issuedToken);
     }
 
     @Test
@@ -183,6 +236,36 @@ public class KisAccessTokenProviderTest {
         // then
         assertThat(token).isSameAs(renewed);
         assertThat(issuer.issueCount()).isEqualTo(3);
+    }
+
+    private static final class FakeAccessTokenStore implements AccessTokenStore {
+
+        private final AccessToken found;
+        private AccessToken saved;
+        private int findCount;
+
+        private FakeAccessTokenStore(AccessToken found) {
+            this.found = found;
+        }
+
+        @Override
+        public Optional<AccessToken> find() {
+            findCount++;
+            return Optional.ofNullable(found);
+        }
+
+        @Override
+        public void save(AccessToken token) {
+            saved = token;
+        }
+
+        private int findCount() {
+            return findCount;
+        }
+
+        private Optional<AccessToken> saved() {
+            return Optional.ofNullable(saved);
+        }
     }
 
 }

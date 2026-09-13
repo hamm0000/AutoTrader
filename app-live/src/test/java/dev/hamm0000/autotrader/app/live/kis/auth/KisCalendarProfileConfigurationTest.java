@@ -2,6 +2,8 @@ package dev.hamm0000.autotrader.app.live.kis.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import dev.hamm0000.autotrader.adapter.kis.auth.AccessTokenStore;
+import dev.hamm0000.autotrader.adapter.kis.auth.FileAccessTokenStore;
 import dev.hamm0000.autotrader.adapter.kis.order.KisOrderApi;
 import dev.hamm0000.autotrader.adapter.kis.query.KisCurrentPriceApi;
 import dev.hamm0000.autotrader.adapter.kis.query.KisDailyClosingPriceApi;
@@ -15,8 +17,10 @@ import dev.hamm0000.autotrader.app.live.kis.query.KisPaperQueryConfiguration;
 import dev.hamm0000.autotrader.app.live.kis.query.account.KisPaperAccountQueryConfiguration;
 import dev.hamm0000.autotrader.app.live.kis.query.calendar.KisCalendarQueryConfiguration;
 import java.net.URI;
+import java.nio.file.Path;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.web.client.RestClient;
 
@@ -24,6 +28,10 @@ class KisCalendarProfileConfigurationTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withBean(RestClient.Builder.class, RestClient::builder)
+            .withBean(
+                    KisPaperAccessTokenCacheProperties.class,
+                    () -> new KisPaperAccessTokenCacheProperties(false, null)
+            )
             .withUserConfiguration(
                     KisPaperAuthConfiguration.class,
                     KisProductionAuthConfiguration.class,
@@ -48,7 +56,7 @@ class KisCalendarProfileConfigurationTest {
                     assertThat(context).doesNotHaveBean(KisDailyClosingPriceApi.class);
                     assertThat(context).doesNotHaveBean(KisPositionApi.class);
                     assertThat(context).doesNotHaveBean(KisOrderApi.class);
-                    assertThat(context).doesNotHaveBean(KisAccessTokenRequestRunner.class);
+                    assertThat(context).doesNotHaveBean(ApplicationRunner.class);
                     assertThat(context).hasBean("kisProductionAccessTokenProvider");
                     assertThat(context).doesNotHaveBean("kisPaperAccessTokenProvider");
                 });
@@ -67,8 +75,9 @@ class KisCalendarProfileConfigurationTest {
                     assertThat(context).doesNotHaveBean(KisPositionApi.class);
                     assertThat(context).doesNotHaveBean(KisOrderApi.class);
                     assertThat(context).doesNotHaveBean(KisTradingDayStatusApi.class);
-                    assertThat(context).hasSingleBean(KisAccessTokenRequestRunner.class);
+                    assertThat(context).doesNotHaveBean(ApplicationRunner.class);
                     assertThat(context).hasBean("kisPaperAccessTokenProvider");
+                    assertThat(context).hasBean("kisPaperAccessTokenStore");
                     assertThat(context).doesNotHaveBean("kisProductionAccessTokenProvider");
                 });
     }
@@ -92,7 +101,25 @@ class KisCalendarProfileConfigurationTest {
                     assertThat(context).hasSingleBean(KisPositionApi.class);
                     assertThat(context).hasSingleBean(KisOrderApi.class);
                     assertThat(context).doesNotHaveBean(KisTradingDayStatusApi.class);
+                    assertThat(context).doesNotHaveBean(ApplicationRunner.class);
                 });
+    }
+
+    @Test
+    void 파일_캐시를_켜면_로컬_토큰_저장소를_조립한다() {
+        // given
+        KisPaperAccessTokenCacheProperties properties =
+                new KisPaperAccessTokenCacheProperties(
+                        true,
+                        Path.of("/tmp/autotrader/kis/token.json")
+                );
+        KisPaperAuthConfiguration configuration = new KisPaperAuthConfiguration();
+
+        // when
+        AccessTokenStore store = configuration.kisPaperAccessTokenStore(properties);
+
+        // then
+        assertThat(store).isInstanceOf(FileAccessTokenStore.class);
     }
 
     private static KisPaperProperties paperProperties() {

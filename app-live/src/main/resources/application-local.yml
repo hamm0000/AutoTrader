@@ -1,0 +1,5 @@
+autotrader:
+  kis:
+    paper:
+      access-token-cache:
+        enabled: true
