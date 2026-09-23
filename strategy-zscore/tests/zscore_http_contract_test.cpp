@@ -17,6 +17,18 @@ httplib::Request requestWith(const json& body) {
     return request;
 }
 
+// 서버가 실행 중일 때 / 상태 확인을 요청하면 / 준비 완료 응답을 반환한다.
+TEST(ZScoreHttpHealth, ReturnsReadyStatus) {
+    httplib::Request request;
+    httplib::Response response;
+
+    handleHealthRequest(request, response);
+
+    EXPECT_EQ(response.status, 200);
+    EXPECT_EQ(response.get_header_value("Content-Type"), "application/json");
+    EXPECT_EQ(json::parse(response.body), json({{"status", "UP"}}));
+}
+
 // 올바른 JSON 요청이 주어졌을 때 / Z-score HTTP 요청을 처리하면 / 기존 형식의 200 응답을 반환한다.
 TEST(ZScoreHttpResponse, ReturnsAnalyticsResultWithStatusOk) {
     const httplib::Request request = requestWith({
