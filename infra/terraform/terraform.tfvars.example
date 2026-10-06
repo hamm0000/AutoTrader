@@ -1,0 +1,22 @@
+aws_region  = "ap-northeast-2"
+project_name = "autotrader"
+environment  = "prod"
+
+# Repositories created after 2026-07-15 use immutable owner/repository IDs in the OIDC subject.
+# Retrieve the numeric IDs after authenticating GitHub CLI, then replace both placeholders.
+github_oidc_subject = "repo:hamm0000@OWNER_ID/AutoTrader@REPOSITORY_ID:environment:production"
+
+# If token.actions.githubusercontent.com is already registered in this AWS account,
+# set its provider ARN here. Otherwise leave this commented so Terraform creates it.
+# github_oidc_provider_arn = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+
+# Keep schedules disabled until ECR images and both secret values have been populated.
+schedules_enabled = false
+
+# After the release workflow publishes both images, copy the digests from its job summary.
+# app_image_digest      = "sha256:<64 lowercase hexadecimal characters>"
+# strategy_image_digest = "sha256:<64 lowercase hexadecimal characters>"
+
+tags = {
+  Repository = "hamm0000/AutoTrader"
+}
