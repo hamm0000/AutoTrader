@@ -1,3 +1,5 @@
+name: autotrader
+
 services:
   postgres:
     image: postgres:17.11-alpine
@@ -8,10 +10,83 @@ services:
     volumes:
       - autotrader-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  market-calendar-refresh:
+    profiles:
+      - calendar-refresh
+    image: autotrader/app-live:local
+    build:
+      context: .
+      dockerfile: app-live/Dockerfile
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env.postgres
+      - .env.calendar-refresh
+    environment:
+      SPRING_PROFILES_ACTIVE: market-calendar-refresh
+      AUTOTRADER_POSTGRES_URL: "jdbc:postgresql://postgres:5432/${POSTGRES_DB:?set POSTGRES_DB with --env-file .env.postgres}"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+
+  zscore-strategy:
+    image: autotrader/strategy-zscore:local
+    build:
+      context: .
+      dockerfile: strategy-zscore/Dockerfile
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  app-live:
+    profiles:
+      - paper-trading
+    image: autotrader/app-live:local
+    build:
+      context: .
+      dockerfile: app-live/Dockerfile
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      zscore-strategy:
+        condition: service_healthy
+    env_file:
+      - .env.paper-trading
+    environment:
+      SPRING_PROFILES_ACTIVE: paper-trading
+      AUTOTRADER_DB_URL: "jdbc:postgresql://postgres:5432/${POSTGRES_DB:?set POSTGRES_DB with --env-file .env.postgres}"
+      AUTOTRADER_DB_USERNAME: "${POSTGRES_USER:?set POSTGRES_USER with --env-file .env.postgres}"
+      AUTOTRADER_DB_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD with --env-file .env.postgres}"
+      ZSCORE_SERVER_BASE_URL: http://zscore-strategy:9000
+      ZSCORE_SERVER_REQUEST_TIMEOUT: 2s
+      KIS_PAPER_ACCESS_TOKEN_CACHE_ENABLED: "true"
+      KIS_PAPER_ACCESS_TOKEN_CACHE_PATH: /var/lib/autotrader/kis/paper-access-token.json
+    volumes:
+      - autotrader-paper-token-cache:/var/lib/autotrader/kis
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
 
 volumes:
   autotrader-postgres-data:
+  autotrader-paper-token-cache:

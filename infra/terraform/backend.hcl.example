@@ -1,0 +1,3 @@
+bucket = "autotrader-prod-terraform-state-123456789012"
+key    = "autotrader/prod/terraform.tfstate"
+region = "ap-northeast-2"

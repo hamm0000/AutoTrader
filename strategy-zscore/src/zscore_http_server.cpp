@@ -9,6 +9,14 @@
 
 namespace autotrader::strategy {
 
+void handleHealthRequest(
+    const httplib::Request&,
+    httplib::Response& response
+) {
+    response.set_content(R"({"status":"UP"})", "application/json");
+    response.status = 200;
+}
+
 void handleZScoreRequest(
     const httplib::Request& request,
     httplib::Response& response
@@ -35,6 +43,7 @@ void handleZScoreRequest(
 }
 
 void registerZScoreRoutes(httplib::Server& server) {
+    server.Get(kHealthPath, handleHealthRequest);
     server.Post(kZScoreSignalPath, handleZScoreRequest);
 }
 

@@ -1,0 +1,129 @@
+name: Release to AWS
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: release-production
+  cancel-in-progress: false
+
+jobs:
+  publish-images:
+    name: Publish immutable images
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+
+    env:
+      AWS_RELEASE_ROLE_ARN: ${{ vars.AWS_RELEASE_ROLE_ARN }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_APP_REPOSITORY: ${{ vars.ECR_APP_REPOSITORY }}
+      ECR_STRATEGY_REPOSITORY: ${{ vars.ECR_STRATEGY_REPOSITORY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate deployment variables
+        shell: bash
+        run: |
+          : "${AWS_RELEASE_ROLE_ARN:?AWS_RELEASE_ROLE_ARN repository variable is required}"
+          : "${AWS_REGION:?AWS_REGION repository variable is required}"
+          : "${ECR_APP_REPOSITORY:?ECR_APP_REPOSITORY repository variable is required}"
+          : "${ECR_STRATEGY_REPOSITORY:?ECR_STRATEGY_REPOSITORY repository variable is required}"
+
+      - name: Require a main commit
+        shell: bash
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - name: Configure AWS credentials with GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: ${{ env.AWS_RELEASE_ROLE_ARN }}
+          role-session-name: autotrader-release
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        shell: bash
+        run: |
+          AWS_ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+          ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+          echo "ECR_REGISTRY=$ECR_REGISTRY" >> "$GITHUB_ENV"
+
+      - name: Build images
+        shell: bash
+        run: |
+          IMAGE_TAG="sha-${GITHUB_SHA}"
+          RELEASE_TAG="${GITHUB_REF_NAME}"
+
+          docker build \
+            --platform linux/amd64 \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --file app-live/Dockerfile \
+            --tag "${ECR_REGISTRY}/${ECR_APP_REPOSITORY}:${IMAGE_TAG}" \
+            --tag "${ECR_REGISTRY}/${ECR_APP_REPOSITORY}:${RELEASE_TAG}" \
+            .
+
+          docker build \
+            --platform linux/amd64 \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --file strategy-zscore/Dockerfile \
+            --tag "${ECR_REGISTRY}/${ECR_STRATEGY_REPOSITORY}:${IMAGE_TAG}" \
+            --tag "${ECR_REGISTRY}/${ECR_STRATEGY_REPOSITORY}:${RELEASE_TAG}" \
+            .
+
+      - name: Push immutable images
+        shell: bash
+        run: |
+          IMAGE_TAG="sha-${GITHUB_SHA}"
+          RELEASE_TAG="${GITHUB_REF_NAME}"
+
+          docker push "${ECR_REGISTRY}/${ECR_APP_REPOSITORY}:${IMAGE_TAG}"
+          docker push "${ECR_REGISTRY}/${ECR_APP_REPOSITORY}:${RELEASE_TAG}"
+          docker push "${ECR_REGISTRY}/${ECR_STRATEGY_REPOSITORY}:${IMAGE_TAG}"
+          docker push "${ECR_REGISTRY}/${ECR_STRATEGY_REPOSITORY}:${RELEASE_TAG}"
+
+      - name: Resolve image digests
+        shell: bash
+        run: |
+          IMAGE_TAG="sha-${GITHUB_SHA}"
+          APP_DIGEST="$(aws ecr describe-images \
+            --repository-name "$ECR_APP_REPOSITORY" \
+            --image-ids "imageTag=${IMAGE_TAG}" \
+            --query 'imageDetails[0].imageDigest' \
+            --output text)"
+          STRATEGY_DIGEST="$(aws ecr describe-images \
+            --repository-name "$ECR_STRATEGY_REPOSITORY" \
+            --image-ids "imageTag=${IMAGE_TAG}" \
+            --query 'imageDetails[0].imageDigest' \
+            --output text)"
+
+          echo "APP_IMAGE=${ECR_REGISTRY}/${ECR_APP_REPOSITORY}@${APP_DIGEST}" >> "$GITHUB_ENV"
+          echo "STRATEGY_IMAGE=${ECR_REGISTRY}/${ECR_STRATEGY_REPOSITORY}@${STRATEGY_DIGEST}" >> "$GITHUB_ENV"
+
+      - name: Record Terraform inputs
+        shell: bash
+        run: |
+          {
+            echo "## Published image digests"
+            echo
+            echo "Copy these immutable digests into infra/terraform/terraform.tfvars,"
+            echo "then let Terraform register the ECS Task Definition revisions."
+            echo
+            echo '```hcl'
+            echo "app_image_digest      = \"${APP_IMAGE#*@}\""
+            echo "strategy_image_digest = \"${STRATEGY_IMAGE#*@}\""
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
