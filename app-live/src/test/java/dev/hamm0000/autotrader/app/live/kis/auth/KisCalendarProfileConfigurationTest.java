@@ -127,7 +127,8 @@ class KisCalendarProfileConfigurationTest {
                 URI.create("https://openapivts.koreainvestment.com:29443"),
                 "test-paper-app-key",
                 "test-paper-app-secret",
-                Duration.ofSeconds(5)
+                Duration.ofSeconds(5),
+                Duration.ofMillis(1_100)
         );
     }
 

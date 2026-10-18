@@ -20,7 +20,8 @@ class KisPaperPropertiesTest {
                 PAPER_BASE_URL,
                 "test-app-key",
                 "test-app-secret",
-                Duration.ofSeconds(5));
+                Duration.ofSeconds(5),
+                Duration.ofMillis(1_100));
 
         // when & then
         assertThatCode(properties::validate).doesNotThrowAnyException();
@@ -33,7 +34,8 @@ class KisPaperPropertiesTest {
                 URI.create("https://notpaper.com"),
                 "test-app-key",
                 "test-app-secret",
-                Duration.ofSeconds(5));
+                Duration.ofSeconds(5),
+                Duration.ofMillis(1_100));
 
         // when & then
         assertThatThrownBy(properties::validate)
@@ -48,12 +50,29 @@ class KisPaperPropertiesTest {
                 PAPER_BASE_URL,
                 "",
                 "",
-                Duration.ofSeconds(5));
+                Duration.ofSeconds(5),
+                Duration.ofMillis(1_100));
 
         // when & then
         assertThatThrownBy(properties::validate)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("KIS 모의투자 자격증명이 필요합니다");
+    }
+
+    @Test
+    void 요청_최소_간격이_0이면_KIS를_설정할_수_없다() {
+        // given
+        KisPaperProperties properties = new KisPaperProperties(
+                PAPER_BASE_URL,
+                "test-app-key",
+                "test-app-secret",
+                Duration.ofSeconds(5),
+                Duration.ZERO);
+
+        // when & then
+        assertThatThrownBy(properties::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("KIS 모의투자 요청 최소 간격은 0보다 커야 합니다");
     }
 
     @Test
@@ -63,7 +82,8 @@ class KisPaperPropertiesTest {
                 PAPER_BASE_URL,
                 "sensitive-app-key",
                 "sensitive-app-secret",
-                Duration.ofSeconds(5));
+                Duration.ofSeconds(5),
+                Duration.ofMillis(1_100));
 
         // when
         String result = properties.toString();

@@ -4,6 +4,7 @@ import dev.hamm0000.autotrader.adapter.kis.auth.AccessTokenStore;
 import dev.hamm0000.autotrader.adapter.kis.auth.FileAccessTokenStore;
 import dev.hamm0000.autotrader.adapter.kis.auth.KisAccessTokenApi;
 import dev.hamm0000.autotrader.adapter.kis.auth.KisAccessTokenProvider;
+import dev.hamm0000.autotrader.adapter.kis.http.KisRequestPacingInterceptor;
 import dev.hamm0000.autotrader.app.live.kis.KisPaperProperties;
 import java.time.InstantSource;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -30,6 +31,9 @@ class KisPaperAuthConfiguration {
         return builder.clone()
                 .baseUrl(properties.baseUrl().toString())
                 .requestFactory(requestFactory)
+                .requestInterceptor(new KisRequestPacingInterceptor(
+                        properties.minimumRequestInterval()
+                ))
                 .build();
     }
 
