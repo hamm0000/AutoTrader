@@ -9,7 +9,8 @@ public record KisPaperProperties(
         URI baseUrl,
         String appKey,
         String appSecret,
-        Duration requestTimeout) {
+        Duration requestTimeout,
+        Duration minimumRequestInterval) {
 
     private static final URI PAPER_BASE_URL =
             URI.create("https://openapivts.koreainvestment.com:29443");
@@ -24,11 +25,17 @@ public record KisPaperProperties(
         if (requestTimeout == null || requestTimeout.isZero() || requestTimeout.isNegative()) {
             throw new IllegalStateException("KIS 요청 timeout은 0보다 커야 합니다");
         }
+        if (minimumRequestInterval == null
+                || minimumRequestInterval.isZero()
+                || minimumRequestInterval.isNegative()) {
+            throw new IllegalStateException("KIS 모의투자 요청 최소 간격은 0보다 커야 합니다");
+        }
     }
 
     @Override
     public String toString() {
         return "KisPaperProperties[baseUrl=" + baseUrl
-                + ", appKey=***, appSecret=***, requestTimeout=" + requestTimeout + "]";
+                + ", appKey=***, appSecret=***, requestTimeout=" + requestTimeout
+                + ", minimumRequestInterval=" + minimumRequestInterval + "]";
     }
 }

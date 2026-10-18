@@ -8,6 +8,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import dev.hamm0000.autotrader.adapter.kis.auth.AccessToken;
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -186,6 +188,35 @@ class KisTradingDayStatusApiTest {
 
         // when & then
         assertInvalidResponse(() -> api.load(period("2026-08-14", "2026-08-14")));
+        server.verify();
+    }
+
+    @Test
+    void KIS가_호출_제한을_반환하면_휴장일_조회를_한_번_재시도한다() {
+        // given
+        RestClient.Builder builder = RestClient.builder().baseUrl(BASE_URL);
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo(startsWith(BASE_URL + HOLIDAY_PATH)))
+                .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("""
+                                {"rt_cd":"1","msg_cd":"EGW00201","msg1":"호출 제한"}
+                                """));
+        server.expect(requestTo(startsWith(BASE_URL + HOLIDAY_PATH)))
+                .andRespond(withSuccess("""
+                        {
+                          "rt_cd":"0",
+                          "output":[{"bass_dt":"20260814","opnd_yn":"Y"}]
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        // when
+        TradingDayStatuses result = api(builder).load(period("2026-08-14", "2026-08-14"));
+
+        // then
+        assertThat(result.values()).containsExactly(
+                status("2026-08-14", TradingDayStatus.OPEN)
+        );
         server.verify();
     }
 

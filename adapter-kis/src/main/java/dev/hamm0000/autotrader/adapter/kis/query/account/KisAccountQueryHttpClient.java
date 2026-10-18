@@ -3,6 +3,7 @@ package dev.hamm0000.autotrader.adapter.kis.query.account;
 import dev.hamm0000.autotrader.adapter.kis.auth.AccessToken;
 import dev.hamm0000.autotrader.adapter.kis.auth.KisAccessTokenProvider;
 import dev.hamm0000.autotrader.adapter.kis.auth.KisAuthException;
+import dev.hamm0000.autotrader.adapter.kis.http.KisReadRequestExecutor;
 import java.net.URI;
 import java.util.Objects;
 import java.util.function.Function;
@@ -41,7 +42,7 @@ final class KisAccountQueryHttpClient {
     ) {
         try {
             AccessToken token = tokenProvider.getAccessToken();
-            ResponseEntity<T> entity = restClient.get()
+            ResponseEntity<T> entity = KisReadRequestExecutor.execute(() -> restClient.get()
                     .uri(uriFunction)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + token.value())
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -50,7 +51,7 @@ final class KisAccountQueryHttpClient {
                     .header("tr_id", transactionId)
                     .header("custtype", "P")
                     .retrieve()
-                    .toEntity(responseType);
+                    .toEntity(responseType));
             T response = entity.getBody();
             if (response == null) {
                 throw KisAccountQueryException.invalidResponse(
