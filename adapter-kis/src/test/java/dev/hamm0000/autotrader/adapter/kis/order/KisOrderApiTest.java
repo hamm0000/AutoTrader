@@ -7,6 +7,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import dev.hamm0000.autotrader.adapter.kis.auth.AccessToken;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -144,6 +146,26 @@ class KisOrderApiTest {
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         server.expect(requestTo(BASE_URL + ORDER_PATH))
                 .andRespond(withSuccess(response, MediaType.APPLICATION_JSON));
+
+        // when & then
+        assertThatThrownBy(() -> api(builder).submit(order(OrderSide.BUY)))
+                .isInstanceOfSatisfying(OrderSubmissionException.class, exception ->
+                        assertThat(exception.reason())
+                                .isEqualTo(OrderSubmissionException.Reason.RESULT_UNKNOWN));
+        server.verify();
+    }
+
+    @Test
+    void KIS가_호출_제한을_반환해도_주문은_재시도하지_않는다() {
+        // given
+        RestClient.Builder builder = RestClient.builder().baseUrl(BASE_URL);
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo(BASE_URL + ORDER_PATH))
+                .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("""
+                                {"rt_cd":"1","msg_cd":"EGW00201","msg1":"호출 제한"}
+                                """));
 
         // when & then
         assertThatThrownBy(() -> api(builder).submit(order(OrderSide.BUY)))

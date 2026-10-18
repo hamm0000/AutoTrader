@@ -6,6 +6,7 @@ import static dev.hamm0000.autotrader.trading.marketcalendar.application.port.ou
 import dev.hamm0000.autotrader.adapter.kis.auth.AccessToken;
 import dev.hamm0000.autotrader.adapter.kis.auth.KisAccessTokenProvider;
 import dev.hamm0000.autotrader.adapter.kis.auth.KisAuthException;
+import dev.hamm0000.autotrader.adapter.kis.http.KisReadRequestExecutor;
 import java.net.URI;
 import java.util.Objects;
 import java.util.function.Function;
@@ -44,7 +45,7 @@ final class KisCalendarQueryHttpClient {
     ) {
         try {
             AccessToken token = tokenProvider.getAccessToken();
-            ResponseEntity<T> response = restClient.get()
+            ResponseEntity<T> response = KisReadRequestExecutor.execute(() -> restClient.get()
                     .uri(uriFunction)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + token.value())
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -53,7 +54,7 @@ final class KisCalendarQueryHttpClient {
                     .header("tr_id", transactionId)
                     .header("custtype", "P")
                     .retrieve()
-                    .toEntity(responseType);
+                    .toEntity(responseType));
             if (response.getBody() == null) {
                 throw invalidResponse("KIS " + dataName + " 응답이 비어 있습니다");
             }

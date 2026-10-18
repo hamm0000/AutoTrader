@@ -7,7 +7,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import dev.hamm0000.autotrader.adapter.kis.auth.AccessToken;
@@ -23,8 +23,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.ResponseCreator;
 import org.springframework.web.client.RestClient;
 
 class KisCurrentPriceApiTest {
@@ -112,12 +114,63 @@ class KisCurrentPriceApiTest {
     }
 
     @Test
-    void KIS가_오류_상태코드를_반환하면_PROVIDER_UNAVAILABLE로_변환한다() {
+    void KIS가_호출_제한을_반환하면_현재가_조회를_한_번_재시도한다() {
         // given
         RestClient.Builder builder = RestClient.builder().baseUrl(BASE_URL);
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         server.expect(requestTo(startsWith(BASE_URL + CURRENT_PRICE_PATH)))
-                .andRespond(withServerError());
+                .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("""
+                                {"rt_cd":"1","msg_cd":"EGW00201","msg1":"호출 제한"}
+                                """));
+        server.expect(requestTo(startsWith(BASE_URL + CURRENT_PRICE_PATH)))
+                .andRespond(withSuccess("""
+                        {
+                          "rt_cd": "0",
+                          "output": {"stck_prpr": "70123.45"}
+                        }
+                        """, MediaType.APPLICATION_JSON));
+        KisCurrentPriceApi api = api(builder);
+
+        // when
+        CurrentPrice result = api.load(new CurrentPriceQuery("005930"));
+
+        // then
+        assertThat(result.value()).isEqualTo(new BigDecimal("70123.45"));
+        server.verify();
+    }
+
+    @Test
+    void KIS_호출_제한이_계속되면_현재가_조회는_한_번만_재시도하고_PROVIDER_UNAVAILABLE로_변환한다() {
+        // given
+        RestClient.Builder builder = RestClient.builder().baseUrl(BASE_URL);
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo(startsWith(BASE_URL + CURRENT_PRICE_PATH)))
+                .andRespond(rateLimitResponse());
+        server.expect(requestTo(startsWith(BASE_URL + CURRENT_PRICE_PATH)))
+                .andRespond(rateLimitResponse());
+        KisCurrentPriceApi api = api(builder);
+
+        // when & then
+        assertThatThrownBy(() -> api.load(new CurrentPriceQuery("005930")))
+                .isInstanceOfSatisfying(MarketDataQueryException.class, exception ->
+                        assertThat(exception.reason())
+                                .isEqualTo(MarketDataQueryException.Reason.PROVIDER_UNAVAILABLE));
+        server.verify();
+    }
+
+    @Test
+    void KIS가_호출_제한이_아닌_500을_반환하면_재시도하지_않고_PROVIDER_UNAVAILABLE로_변환한다() {
+        // given
+        RestClient.Builder builder = RestClient.builder().baseUrl(BASE_URL);
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo(startsWith(BASE_URL + CURRENT_PRICE_PATH)))
+                .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("""
+                                {"rt_cd":"1","msg_cd":"SERVER_ERROR","msg1":"서버 오류"}
+                                """));
         KisCurrentPriceApi api = api(builder);
 
         // when & then
@@ -175,5 +228,13 @@ class KisCurrentPriceApiTest {
         return new KisCurrentPriceApi(
                 RestClient.builder().baseUrl(BASE_URL).build(),
                 tokenProvider, APP_KEY, APP_SECRET);
+    }
+
+    private static ResponseCreator rateLimitResponse() {
+        return withStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("""
+                        {"rt_cd":"1","msg_cd":"EGW00201","msg1":"호출 제한"}
+                        """);
     }
 }
