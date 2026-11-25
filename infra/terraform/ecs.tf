@@ -9,17 +9,17 @@ resource "aws_ecs_cluster" "main" {
 
 resource "aws_cloudwatch_log_group" "paper_app" {
   name              = "/ecs/${local.name_prefix}/paper-app"
-  retention_in_days = 14
+  retention_in_days = 90
 }
 
 resource "aws_cloudwatch_log_group" "paper_strategy" {
   name              = "/ecs/${local.name_prefix}/paper-strategy"
-  retention_in_days = 14
+  retention_in_days = 90
 }
 
 resource "aws_cloudwatch_log_group" "calendar_refresh" {
   name              = "/ecs/${local.name_prefix}/calendar-refresh"
-  retention_in_days = 14
+  retention_in_days = 90
 }
 
 resource "aws_ecs_task_definition" "paper_trading" {

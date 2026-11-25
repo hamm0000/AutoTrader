@@ -60,6 +60,16 @@ output "calendar_log_group_name" {
   value = aws_cloudwatch_log_group.calendar_refresh.name
 }
 
+output "task_stopped_log_group_name" {
+  description = "Stopped task diagnostics for checking container exit codes and startup failures."
+  value       = aws_cloudwatch_log_group.task_stopped.name
+}
+
+output "task_stopped_event_rule_name" {
+  description = "EventBridge rule used to record stopped task events."
+  value       = aws_cloudwatch_event_rule.task_stopped.name
+}
+
 output "paper_secret_arn" {
   description = "Secret container to populate with the four KIS paper-trading values."
   value       = aws_secretsmanager_secret.paper_trading.arn

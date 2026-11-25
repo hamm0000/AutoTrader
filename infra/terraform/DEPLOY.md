@@ -294,6 +294,24 @@ aws sqs get-queue-attributes \
 DLQ에는 Scheduler가 ECS `RunTask` 요청을 전달하지 못한 경우만 기록됩니다. 컨테이너 시작
 실패나 애플리케이션 오류는 ECS Task 상태와 CloudWatch Logs에서 확인합니다.
 
+### Task 종료 이벤트 수집 최초 확인
+
+Task 종료 이벤트 수집을 처음 구성한 뒤에는 다음 예약 실행이 끝나면 로그가 기록되는지
+확인합니다. 정상 실행의 컨테이너별 종료 코드를 확인하고 SNS 알림 조건을 정하기 위한
+절차입니다. 확인을 위해 paper Task를 별도로 실행하지 않습니다.
+
+```bash
+aws logs tail "$(terraform output -raw task_stopped_log_group_name)" --since 24h
+```
+
+Task ARN으로 실행을 구분하고 `detail.containers`에서 컨테이너 이름과 종료 코드를
+확인합니다. paper Task는 `app-live`와 `zscore-strategy`, calendar Task는
+`market-calendar-refresh`를 확인합니다.
+
+컨테이너가 시작하지 못한 경우 종료 코드가 없을 수 있습니다. 이때는 0으로 간주하지 않고
+`detail.stoppedReason`과 컨테이너의 `reason`을 확인합니다. 앱 로그는 Task ARN 끝의
+Task ID로 `ecs/<컨테이너 이름>/<Task ID>` 스트림을 찾아 확인합니다.
+
 ## 이후 버전 배포
 
 최초 배포가 끝난 뒤에는 state bucket, secret, 캘린더 bootstrap을 다시 만들 필요가 없습니다.
